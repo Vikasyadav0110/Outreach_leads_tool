@@ -1,0 +1,19 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next
+/out
+
+# env
+.env.local
+.env*.local
+
+# sqlite db + wal files
+/data/*.db
+/data/*.db-shm
+/data/*.db-wal
+
+# os
+.DS_Store
+*.log
