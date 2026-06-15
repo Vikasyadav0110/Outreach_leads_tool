@@ -63,7 +63,7 @@ export default function SecuritySettings() {
   }
 
   return (
-    <div className="card p-6">
+    <div className="card p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-base font-semibold text-ink">Security</h2>

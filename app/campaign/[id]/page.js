@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCampaign } from "@/lib/db";
 import { isMockMode } from "@/lib/anthropic";
 import { DomainChip } from "@/app/components/Brand";
+import PageHeader from "@/app/components/PageHeader";
 import DeleteCampaignButton from "@/app/components/DeleteCampaignButton";
 import CampaignRunner from "./CampaignRunner";
 
@@ -16,24 +16,20 @@ export default function CampaignPage({ params, searchParams }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <Link href="/" className="text-sm text-muted hover:text-ink">
-            ← All campaigns
-          </Link>
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <h1 className="h-display text-xl text-ink">
-              {campaign.niche} · {campaign.city}
-            </h1>
+      <PageHeader
+        backHref="/campaigns"
+        backLabel="All campaigns"
+        title={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {campaign.niche} · {campaign.city}
             <DomainChip domain={campaign.domain} />
-          </div>
-          <p className="text-sm text-muted">Campaign #{campaign.id}</p>
-        </div>
-        <DeleteCampaignButton
-          id={campaign.id}
-          label={`${campaign.niche} · ${campaign.city}`}
-        />
-      </div>
+          </span>
+        }
+        subtitle={`Campaign #${campaign.id}`}
+        action={
+          <DeleteCampaignButton id={campaign.id} label={`${campaign.niche} · ${campaign.city}`} />
+        }
+      />
 
       <CampaignRunner initialCampaign={campaign} autorun={autorun} mock={isMockMode()} />
     </div>

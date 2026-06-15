@@ -33,3 +33,17 @@ export function mailHref(rawEmail, subject, body) {
     subject || ""
   )}&body=${encodeURIComponent(body || "")}`;
 }
+
+// Build a Gmail web "compose" link (opens in the browser with To/subject/body
+// prefilled), or null if invalid. Open this in a new tab.
+export function gmailHref(rawEmail, subject, body) {
+  if (!isEmail(rawEmail)) return null;
+  const p = new URLSearchParams({
+    view: "cm",
+    fs: "1",
+    to: String(rawEmail).trim(),
+    su: subject || "",
+    body: body || "",
+  });
+  return `https://mail.google.com/mail/?${p.toString()}`;
+}

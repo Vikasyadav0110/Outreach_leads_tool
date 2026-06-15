@@ -28,7 +28,7 @@ module.exports = {
         pop: "0 16px 40px -12px rgba(16,24,40,.28)",
       },
       maxWidth: {
-        content: "1100px",
+        content: "1280px",
       },
       transitionDuration: {
         DEFAULT: "150ms",

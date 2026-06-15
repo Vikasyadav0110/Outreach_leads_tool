@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getClient, isMockMode, MODELS } from "@/lib/anthropic";
+import { getClient, isMockMode, MODELS, providerForTask, beginCall } from "@/lib/anthropic";
 import { requireApiAuth } from "@/lib/authGuard";
 
 export const runtime = "nodejs";
@@ -16,7 +16,10 @@ export async function POST(req) {
       return NextResponse.json({ error: "No message provided." }, { status: 400 });
     }
 
-    if (isMockMode()) {
+    // Copilot is a small, high-volume chat task → routed via API Management
+    // (defaults to Gemini). Falls back to the other provider if its key is missing.
+    const PREFER = providerForTask("copilot");
+    if (isMockMode(PREFER)) {
       return NextResponse.json({ reply: mockReply() });
     }
 
@@ -25,7 +28,8 @@ export async function POST(req) {
         ? `${SYSTEM}\n\nCONTEXT (what the user is currently viewing):\n${context.slice(0, 2000)}`
         : SYSTEM;
 
-    const client = getClient();
+    const client = getClient(PREFER);
+    beginCall({ task: "copilot" });
     const res = await client.messages.create({
       model: MODELS.writeMessages, // Sonnet 4.6 — fast + cheap for chat
       max_tokens: 1024,

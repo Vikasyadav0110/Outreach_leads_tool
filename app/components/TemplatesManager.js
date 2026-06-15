@@ -3,6 +3,7 @@
 import { useState } from "react";
 import CopyButton from "./CopyButton";
 import ErrorAlert from "./ErrorAlert";
+import EmptyState from "./EmptyState";
 import { toast } from "./toast";
 import { TEMPLATE_TOKENS } from "./templateVars";
 import { TrashIcon } from "./icons";
@@ -65,7 +66,7 @@ export default function TemplatesManager({ initial }) {
   return (
     <div className="space-y-6">
       {/* Add form */}
-      <div className="card p-6">
+      <div className="card p-5">
         <h2 className="text-base font-semibold text-ink">New template</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <div className="sm:col-span-2">
@@ -98,9 +99,7 @@ export default function TemplatesManager({ initial }) {
 
       {/* List */}
       {items.length === 0 ? (
-        <div className="card p-10 text-center text-sm text-muted">
-          No templates yet. Save reusable copy above.
-        </div>
+        <EmptyState title="No templates yet" hint="Save reusable copy above to reuse it across any outreach." />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {items.map((s) => {

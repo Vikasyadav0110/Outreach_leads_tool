@@ -264,7 +264,7 @@ export default function LeadsTable({
       <div className="table-wrap">
         <table className="w-full min-w-[880px] text-sm">
           <thead>
-            <tr className="border-b border-line text-left text-xs font-medium text-muted">
+            <tr className="bg-[#f3f3f0] text-left text-xs font-medium uppercase tracking-wide text-muted">
               <th className="px-4 py-3">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all" />
               </th>
@@ -305,12 +305,13 @@ export default function LeadsTable({
 
       {selectedLead && (
         <LeadDrawer
-          lead={selectedLead}
+          lead={{ ...selectedLead, campaignId }}
           card={cardByName[selKey]}
           message={msgByName[selKey]}
           domain={domain}
           status={selOutcome.status || DEFAULT_STATUS}
           notes={selOutcome.notes || ""}
+          deal={selOutcome.deal}
           updatedAt={selOutcome.updatedAt}
           createdAt={campaignCreatedAt}
           mock={mock}

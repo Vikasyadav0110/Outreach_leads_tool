@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import CopyButton from "./CopyButton";
-import { toDigits, mailHref, waHref } from "./contact";
+import { toDigits, gmailHref, waHref } from "./contact";
 
 const TABS = [
   { key: "email", label: "Email" },
@@ -87,7 +87,7 @@ function MessageBlock({ msg, contact, mock }) {
 
   const digits = mock ? null : toDigits(contact?.whatsapp);
   const waLink = mock ? null : waHref(contact?.whatsapp, msg.whatsapp);
-  const mailLink = mock ? null : mailHref(contact?.email, msg.email?.subject, msg.email?.body);
+  const mailLink = mock ? null : gmailHref(contact?.email, msg.email?.subject, msg.email?.body);
   const telHref = digits ? `tel:+${digits}` : null;
 
   return (
@@ -121,6 +121,7 @@ function MessageBlock({ msg, contact, mock }) {
               <div className="flex items-center gap-2">
                 <SendButton
                   href={mailLink}
+                  external
                   variant="email"
                   icon={<MailIcon />}
                   label="Send email"

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import ErrorAlert from "@/app/components/ErrorAlert";
+import PageHeader from "@/app/components/PageHeader";
 import SecuritySettings from "@/app/components/SecuritySettings";
+import ApiManagement from "@/app/components/ApiManagement";
 import { toast } from "@/app/components/toast";
 import { ACCENTS, DEFAULT_ACCENT } from "@/app/components/theme";
 
@@ -44,6 +45,7 @@ export default function SettingsPage() {
     portfolioLine: "",
     brandName: "",
     accentKey: "blue",
+    aiProvider: "anthropic",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -91,36 +93,66 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/" className="text-sm text-muted hover:text-ink">
-          ← Dashboard
-        </Link>
-        <h1 className="h-display mt-1 text-xl text-ink">Settings</h1>
-        <p className="text-sm text-muted">
-          Your profile personalizes outreach; branding lets you white-label the app.
+      <PageHeader
+        backHref="/"
+        backLabel="Dashboard"
+        title="Settings"
+        subtitle="Your profile personalizes outreach; branding lets you white-label the app."
+      />
+
+      {/* AI connection status (provider-aware) */}
+      {!loading &&
+        (() => {
+          const gem = form.aiProvider === "gemini";
+          const envVar = gem ? "GEMINI_API_KEY" : "ANTHROPIC_API_KEY";
+          const models = gem
+            ? "Gemini 2.5 Pro for research, 2.5 Flash for the rest"
+            : "Opus 4.8 for research, Sonnet 4.6 for the rest";
+          return mock ? (
+            <div className="rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <span className="font-semibold">AI is in Simulated mode.</span> Leads,
+              contacts, and copy are placeholders. To go live, set a valid
+              <code className="mx-1 rounded bg-white/60 px-1">{envVar}</code>
+              in <code className="rounded bg-white/60 px-1">.env.local</code> (server-side)
+              and restart. Keys are configured on the server by design — never in the browser.
+            </div>
+          ) : (
+            <div className="rounded-card border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              <span className="font-semibold">✓ AI connected ({gem ? "Google Gemini" : "Anthropic Claude"}).</span>{" "}
+              Live research and copy enabled ({models}).
+            </div>
+          );
+        })()}
+
+      {/* AI provider (global default — per-task routing lives in API Management) */}
+      <div className="card p-5">
+        <h2 className="text-base font-semibold text-ink">AI provider (default)</h2>
+        <p className="mt-1 text-sm text-muted">
+          Fallback provider for anything not set per-task below. Set the matching key in <code className="rounded bg-[#f3f3f0] px-1">.env.local</code>.
         </p>
+        <div className="mt-4 max-w-sm">
+          <label className="label" htmlFor="aiProvider">Provider</label>
+          <select
+            id="aiProvider"
+            className="input"
+            value={form.aiProvider || "anthropic"}
+            onChange={(e) => setForm({ ...form, aiProvider: e.target.value })}
+          >
+            <option value="anthropic">Anthropic Claude — Opus 4.8 + Sonnet 4.6</option>
+            <option value="gemini">Google Gemini — 2.5 Pro + 2.5 Flash</option>
+          </select>
+          <p className="mt-1 text-xs text-muted">
+            {form.aiProvider === "gemini" ? "Needs GEMINI_API_KEY." : "Needs ANTHROPIC_API_KEY."}{" "}
+            Save, then restart the server if you just added the key.
+          </p>
+        </div>
       </div>
 
-      {/* AI connection status */}
-      {!loading &&
-        (mock ? (
-          <div className="rounded-card border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <span className="font-semibold">AI is in Simulated mode.</span> Leads,
-            contacts, and copy are placeholders. To go live, set a valid
-            <code className="mx-1 rounded bg-white/60 px-1">ANTHROPIC_API_KEY</code>
-            in <code className="rounded bg-white/60 px-1">.env.local</code> (server-side)
-            and restart. Keys are configured on the server by design — they're never
-            entered or stored in the browser.
-          </div>
-        ) : (
-          <div className="rounded-card border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-            <span className="font-semibold">✓ AI connected.</span> Live research and
-            copy are enabled (Opus 4.8 for research, Sonnet 4.6 for the rest).
-          </div>
-        ))}
+      {/* API Management — per-task provider routing + usage/budgets */}
+      <ApiManagement />
 
       {/* Branding / white-label */}
-      <div className="card p-6">
+      <div className="card p-5">
         <h2 className="text-base font-semibold text-ink">Branding</h2>
         <p className="mt-1 text-sm text-muted">
           Rebrand the app for your agency — name and accent color apply everywhere.
@@ -165,7 +197,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Sender profile */}
-      <div className="card p-6">
+      <div className="card p-5">
         <h2 className="text-base font-semibold text-ink">Sender profile</h2>
         <p className="mt-1 text-sm text-muted">
           Injected into the message-writer so outreach is signed in your name.

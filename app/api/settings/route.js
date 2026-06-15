@@ -31,6 +31,7 @@ export async function POST(req) {
       portfolioLine: body.portfolioLine,
       brandName: body.brandName,
       accentKey: body.accentKey,
+      aiProvider: body.aiProvider === "gemini" ? "gemini" : body.aiProvider === "anthropic" ? "anthropic" : undefined,
     });
     return NextResponse.json({ settings });
   } catch (err) {

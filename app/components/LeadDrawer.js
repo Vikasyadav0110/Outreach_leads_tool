@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import ScoreBadge from "./ScoreBadge";
 import StatusSelect from "./StatusSelect";
 import CopyButton from "./CopyButton";
 import TemplatePicker from "./TemplatePicker";
 import { DomainChip } from "./Brand";
-import { toDigits, waHref, mailHref } from "./contact";
+import { toDigits, waHref, gmailHref } from "./contact";
 import { fillTemplate } from "./templateVars";
 import { fmtDateTime } from "./format";
+import { toast } from "./toast";
 
 function Field({ label, children }) {
   return (
@@ -39,6 +42,89 @@ function ActionLink({ href, external, tone, children, disabledLabel }) {
   );
 }
 
+const LOSS_REASONS = ["Price / budget", "Went with competitor", "Bad timing", "No response", "Not a fit", "Other"];
+
+// Deal capture shown when a lead is won/lost. Won → value, partner, commission %,
+// expected close; lost → reason. Saves to the lead's outcome via the API.
+function DealForm({ status, campaignId, leadName, initial = {}, onSaved }) {
+  const [value, setValue] = useState(initial.value ? String(initial.value) : "");
+  const [partner, setPartner] = useState(initial.partner || "");
+  const [commissionPct, setCommissionPct] = useState(initial.commissionPct ? String(initial.commissionPct) : "");
+  const [expectedClose, setExpectedClose] = useState(initial.expectedClose || "");
+  const [reason, setReason] = useState(initial.reason || "");
+  const [saving, setSaving] = useState(false);
+
+  const commissionAmt =
+    Number(value) > 0 && Number(commissionPct) > 0
+      ? Math.round((Number(value) * Number(commissionPct)) / 100)
+      : 0;
+
+  async function save() {
+    setSaving(true);
+    try {
+      const deal =
+        status === "won"
+          ? { value: Number(value) || 0, partner, commissionPct: Number(commissionPct) || 0, expectedClose }
+          : { reason };
+      const res = await fetch(`/api/campaigns/${campaignId}/outcomes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadName, deal }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Could not save.");
+      toast("Deal details saved.");
+      onSaved?.();
+    } catch (e) {
+      toast(e.message, "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-line bg-[#f7f7f4] p-3">
+      {status === "won" ? (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block">
+              <span className="text-[11px] font-medium text-muted">Deal value (₹)</span>
+              <input type="number" min="0" className="input mt-0.5 py-1 text-sm" value={value} onChange={(e) => setValue(e.target.value)} placeholder="50000" />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-muted">Commission %</span>
+              <input type="number" min="0" max="100" className="input mt-0.5 py-1 text-sm" value={commissionPct} onChange={(e) => setCommissionPct(e.target.value)} placeholder="20" />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-muted">Delivery partner</span>
+              <input className="input mt-0.5 py-1 text-sm" value={partner} onChange={(e) => setPartner(e.target.value)} placeholder="Partner / in-house" />
+            </label>
+            <label className="block">
+              <span className="text-[11px] font-medium text-muted">Expected close</span>
+              <input type="date" className="input mt-0.5 py-1 text-sm" value={expectedClose} onChange={(e) => setExpectedClose(e.target.value)} />
+            </label>
+          </div>
+          {commissionAmt > 0 && (
+            <p className="mt-2 text-xs text-success">Your commission: ₹{commissionAmt.toLocaleString("en-IN")}</p>
+          )}
+        </>
+      ) : (
+        <label className="block">
+          <span className="text-[11px] font-medium text-muted">Why was it lost?</span>
+          <select className="input mt-0.5 py-1 text-sm" value={reason} onChange={(e) => setReason(e.target.value)}>
+            <option value="">Select a reason…</option>
+            {LOSS_REASONS.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      <button type="button" onClick={save} disabled={saving} className="btn-primary mt-2 px-3 py-1.5 text-xs disabled:opacity-60">
+        {saving ? "Saving…" : "Save deal"}
+      </button>
+    </div>
+  );
+}
+
 export default function LeadDrawer({
   lead,
   card,
@@ -46,6 +132,7 @@ export default function LeadDrawer({
   domain,
   status,
   notes,
+  deal,
   updatedAt,
   createdAt,
   mock,
@@ -58,10 +145,39 @@ export default function LeadDrawer({
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
+  const router = useRouter();
   const [draftNotes, setDraftNotes] = useState(notes || "");
   const [savingNotes, setSavingNotes] = useState(false);
   const [compose, setCompose] = useState("");
   const [profile, setProfile] = useState({});
+  const [qualifying, setQualifying] = useState(false);
+
+  // Manually qualify (promote) THIS lead — gives a NORMAL/<7 lead a
+  // qualification card so it becomes contactable, without re-running the batch.
+  async function qualifyThisLead() {
+    if (!lead.campaignId) return;
+    setQualifying(true);
+    try {
+      const res = await fetch("/api/agents/qualify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId: lead.campaignId, leadName: lead.name }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Could not qualify.");
+      toast("Lead qualified — contact details + messages added.");
+      onClose();
+      router.refresh();
+    } catch (e) {
+      toast(e.message, "error");
+    } finally {
+      setQualifying(false);
+    }
+  }
+  // Render into <body> via a portal so the fixed overlay isn't trapped by any
+  // transformed ancestor (e.g. the campaign section's fade-in animation).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Load the sender profile so inserted templates can fill {me}/{myLocation}.
   useEffect(() => {
@@ -96,7 +212,7 @@ export default function LeadDrawer({
 
   const digits = mock ? null : toDigits(card?.whatsapp);
   const waLink = mock ? null : waHref(card?.whatsapp, message?.whatsapp);
-  const mailLink = mock ? null : mailHref(card?.email, message?.email?.subject, message?.email?.body);
+  const mailLink = mock ? null : gmailHref(card?.email, message?.email?.subject, message?.email?.body);
   const telHref = digits ? `tel:+${digits}` : null;
 
   // Touch timeline derived from available data.
@@ -113,7 +229,9 @@ export default function LeadDrawer({
     setSavingNotes(false);
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`Lead: ${lead.name}`}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
@@ -146,9 +264,22 @@ export default function LeadDrawer({
               <span className="text-xs font-medium text-muted">Status</span>
               <StatusSelect value={status} onChange={onStatusChange} />
             </div>
+
+            {/* Deal capture — appears when won (value/partner/commission) or
+                lost (reason). Persists via the outcomes API for this lead. */}
+            {(status === "won" || status === "lost") && lead.campaignId && (
+              <DealForm
+                status={status}
+                campaignId={lead.campaignId}
+                leadName={lead.name}
+                initial={deal}
+                onSaved={() => router.refresh()}
+              />
+            )}
+
             <div className="mt-3 flex flex-wrap gap-2">
               <ActionLink href={waLink} external tone="whatsapp" disabledLabel="No WhatsApp">Send WhatsApp</ActionLink>
-              <ActionLink href={mailLink} tone="email" disabledLabel="No email">Send email</ActionLink>
+              <ActionLink href={mailLink} external tone="email" disabledLabel="No email">Send email</ActionLink>
               <ActionLink href={telHref} tone="call" disabledLabel="No number">Call</ActionLink>
             </div>
             {onPrep && (
@@ -162,10 +293,23 @@ export default function LeadDrawer({
           <section>
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Qualification</h4>
             {!card && (
-              <p className="mb-2 rounded-lg bg-[#f7f7f4] px-3 py-2 text-xs text-muted">
-                Not qualified yet — only HIGH-priority leads (score ≥ 7) are
-                auto-qualified, so this lead has no contact details or messages.
-              </p>
+              <div className="mb-2 rounded-lg bg-[#f7f7f4] px-3 py-2.5">
+                <p className="text-xs text-muted">
+                  Not qualified yet — only HIGH-priority leads (score ≥ 7) are
+                  auto-qualified. Promote this one to find its contact details and
+                  draft messages.
+                </p>
+                {lead.campaignId && (
+                  <button
+                    type="button"
+                    onClick={qualifyThisLead}
+                    disabled={qualifying}
+                    className="btn-primary mt-2 px-3 py-1.5 text-xs disabled:opacity-60"
+                  >
+                    {qualifying ? "Qualifying…" : "Qualify this lead"}
+                  </button>
+                )}
+              </div>
             )}
             <div className="card space-y-2 p-4">
               <Field label="Gap">{card?.exactGap || lead.gap || "—"}</Field>
@@ -236,7 +380,8 @@ export default function LeadDrawer({
                 Send on WhatsApp
               </ActionLink>
               <ActionLink
-                href={!mock && compose.trim() ? mailHref(card?.email, "Quick note", compose) : null}
+                href={!mock && compose.trim() ? gmailHref(card?.email, "Quick note", compose) : null}
+                external
                 tone="email"
                 disabledLabel="Email"
               >
@@ -281,6 +426,7 @@ export default function LeadDrawer({
           </section>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -7,7 +7,7 @@ import QualificationCards from "@/app/components/QualificationCards";
 import MessageTabs from "@/app/components/MessageTabs";
 import MeetingModal from "@/app/components/MeetingModal";
 import ErrorAlert from "@/app/components/ErrorAlert";
-import StatTile from "@/app/components/StatTile";
+import { KpiCard } from "@/app/components/charts";
 import AgentActivity from "@/app/components/AgentActivity";
 import { LeadsTableSkeleton, CardsSkeleton } from "@/app/components/Skeleton";
 import { fmtCost } from "@/app/components/format";
@@ -32,6 +32,14 @@ const AGENTS = [
     endpoint: "/api/agents/write-messages",
     running: "Agent 3 is writing emails, WhatsApp messages, and call scripts…",
   },
+];
+
+// Plain-English title + description for each runnable step (drives the CTA and
+// the numbered result-section headers). Step 4 (meeting prep) is per-lead.
+const STEP_META = [
+  { n: 1, title: "Find leads", desc: "AI searches the web and scores real businesses." },
+  { n: 2, title: "Qualify", desc: "AI finds the contact and the exact problem to pitch." },
+  { n: 3, title: "Write outreach", desc: "AI drafts the email, WhatsApp/LinkedIn message, and call script." },
 ];
 
 export default function CampaignRunner({ initialCampaign, autorun, mock }) {
@@ -75,6 +83,12 @@ export default function CampaignRunner({ initialCampaign, autorun, mock }) {
       setActiveIndex(-1);
       return null;
     }
+  }
+
+  // Run only the next unfinished step (one agent).
+  async function runStep() {
+    const ns = nextStep(campaign);
+    if (ns < AGENTS.length) await callAgent(AGENTS[ns]);
   }
 
   // Run the whole pipeline from a given starting agent index.
@@ -125,6 +139,12 @@ export default function CampaignRunner({ initialCampaign, autorun, mock }) {
         </div>
       )}
 
+      {completedThrough === -1 && !running && (
+        <p className="text-sm text-muted">
+          This campaign runs in <span className="font-semibold text-ink">4 guided steps</span> — run them one at a time and review each result before moving on. Start with Step 1 below.
+        </p>
+      )}
+
       {/* Pipeline indicator + controls */}
       <div className="card p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -132,25 +152,49 @@ export default function CampaignRunner({ initialCampaign, autorun, mock }) {
             activeIndex={activeIndex}
             completedThrough={completedThrough}
           />
-          <div className="flex items-center gap-2">
-            {!running && completedThrough < 3 && (
-              <button
-                className="btn-primary"
-                onClick={() => runFrom(nextStep(campaign))}
-              >
-                {completedThrough === -1 ? "Run Pipeline" : "Continue"}
-              </button>
+          <div className="flex flex-col items-stretch gap-1.5 sm:items-end">
+            {!running && completedThrough < 3 && (() => {
+              const ns = nextStep(campaign);
+              const meta = STEP_META[ns];
+              const remaining = AGENTS.length - ns;
+              return (
+                <>
+                  <button className="btn-primary" onClick={runStep}>
+                    ▶ Run step {meta.n}: {meta.title}
+                  </button>
+                  {remaining > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => runFrom(ns)}
+                      className="text-xs font-medium text-muted hover:text-ink"
+                    >
+                      or run all {remaining} remaining steps
+                    </button>
+                  )}
+                </>
+              );
+            })()}
+            {completedThrough >= 3 && (
+              <span className="text-sm font-medium text-success">✓ All steps complete</span>
             )}
             {campaign.messages && (
-              <a
-                href={`/api/campaigns/${campaign.id}/export`}
-                className="btn-ghost"
-              >
+              <a href={`/api/campaigns/${campaign.id}/export`} className="btn-ghost">
                 Download kit (.txt)
               </a>
             )}
           </div>
         </div>
+
+        {/* Next-step guidance */}
+        {!running && completedThrough < 3 && (() => {
+          const meta = STEP_META[nextStep(campaign)];
+          return (
+            <p className="mt-4 text-xs text-muted">
+              <span className="font-semibold text-ink">Next — Step {meta.n}: {meta.title}.</span>{" "}
+              {meta.desc} {!mock && <span className="text-amber-700">Uses AI credits.</span>}
+            </p>
+          );
+        })()}
 
         {running && (
           <div className="mt-5 rounded-lg bg-gradient-to-r from-accent/10 to-accent2/10 px-4 py-3">
@@ -176,10 +220,10 @@ export default function CampaignRunner({ initialCampaign, autorun, mock }) {
       {/* Stat tiles */}
       {campaign.leads && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-          <StatTile label="Leads" value={campaign.leads.length} />
-          <StatTile label="HIGH priority" value={highCount} valueClass="text-warning" />
-          <StatTile label="Won" value={wonCount} valueClass="text-success" />
-          <StatTile label={mock ? "Est. cost (sim)" : "Est. cost"} value={fmtCost(campaign.usage?.costUsd)} />
+          <KpiCard label="Leads" value={campaign.leads.length} tone="accent" />
+          <KpiCard label="HIGH priority" value={highCount} tone="warning" />
+          <KpiCard label="Won" value={wonCount} tone="success" />
+          <KpiCard label={mock ? "Est. cost (sim)" : "Est. cost"} value={fmtCost(campaign.usage?.costUsd)} />
         </div>
       )}
 
@@ -196,7 +240,7 @@ export default function CampaignRunner({ initialCampaign, autorun, mock }) {
         <section className="section-enter space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-ink">
-              Leads ({campaign.leads.length})
+              Step 1 · Leads ({campaign.leads.length})
             </h3>
             <span className="text-xs text-muted">
               {highCount} HIGH priority (score ≥ 7)
@@ -227,7 +271,7 @@ export default function CampaignRunner({ initialCampaign, autorun, mock }) {
       {campaign.qualified && (
         <section className="section-enter space-y-3">
           <h3 className="text-sm font-semibold text-ink">
-            Qualification cards ({campaign.qualified.length})
+            Step 2 · Qualification cards ({campaign.qualified.length})
           </h3>
           <QualificationCards
             cards={campaign.qualified}
@@ -249,7 +293,7 @@ export default function CampaignRunner({ initialCampaign, autorun, mock }) {
       {campaign.messages && (
         <section className="section-enter space-y-3">
           <h3 className="text-sm font-semibold text-ink">
-            Messages ({campaign.messages.length})
+            Step 3 · Messages ({campaign.messages.length})
           </h3>
           <MessageTabs
             messages={campaign.messages}

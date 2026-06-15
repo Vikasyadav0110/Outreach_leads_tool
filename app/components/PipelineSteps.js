@@ -1,7 +1,7 @@
 // Pipeline progress: 4 connected dots — Find → Qualify → Write → Ready.
 // current step = accent blue, completed = green, future = gray.
 const STEPS = [
-  { key: "find", label: "Find" },
+  { key: "find", label: "Find leads" },
   { key: "qualify", label: "Qualify" },
   { key: "write", label: "Write" },
   { key: "ready", label: "Ready" },

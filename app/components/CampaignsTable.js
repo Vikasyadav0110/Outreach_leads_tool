@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DomainChip } from "./Brand";
+import EmptyState from "./EmptyState";
 import { LEAD_STATUSES } from "./status";
 import { toast } from "./toast";
 import { fmtDate } from "./format";
@@ -52,27 +54,30 @@ function OutcomeRollup({ counts }) {
   );
 }
 
-function EmptyState() {
-  return (
-    <div className="card flex flex-col items-center justify-center px-8 py-14 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-accent/10 to-accent2/10 text-accent">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M3 3v18h18" />
-          <path d="m7 14 4-4 3 3 5-6" />
-        </svg>
-      </div>
-      <h3 className="mt-3 text-sm font-semibold text-ink">No campaigns yet</h3>
-      <p className="mt-1 max-w-xs text-sm text-muted">
-        Start one above — pick a domain, city, and niche, and the pipeline runs end to end.
-      </p>
-    </div>
-  );
-}
+const ChartGlyph = (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 3v18h18" />
+    <path d="m7 14 4-4 3 3 5-6" />
+  </svg>
+);
 
 export default function CampaignsTable({ campaigns }) {
   const router = useRouter();
 
-  if (!campaigns || campaigns.length === 0) return <EmptyState />;
+  if (!campaigns || campaigns.length === 0) {
+    return (
+      <EmptyState
+        icon={ChartGlyph}
+        title="No campaigns yet"
+        hint="Create a campaign — pick a domain, city, and niche, and run the pipeline end to end."
+        action={
+          <Link href="/campaigns/new" className="btn-primary">
+            New campaign
+          </Link>
+        }
+      />
+    );
+  }
 
   function go(id) {
     router.push(`/campaign/${id}`);
@@ -93,17 +98,17 @@ export default function CampaignsTable({ campaigns }) {
 
   return (
     <div className="table-wrap">
-      <table className="w-full min-w-[760px] text-sm">
+      <table className="data-table min-w-[760px]">
         <thead>
-          <tr className="border-b border-line text-left text-xs font-medium text-muted">
-            <th className="px-4 py-3">Date</th>
-            <th className="px-4 py-3">Domain</th>
-            <th className="px-4 py-3">City</th>
-            <th className="px-4 py-3">Niche</th>
-            <th className="px-4 py-3">Leads</th>
-            <th className="px-4 py-3">Pipeline</th>
-            <th className="px-4 py-3">Status</th>
-            <th className="px-4 py-3"></th>
+          <tr>
+            <th>Date</th>
+            <th>Domain</th>
+            <th>City</th>
+            <th>Niche</th>
+            <th>Leads</th>
+            <th>Pipeline</th>
+            <th>Status</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -119,7 +124,7 @@ export default function CampaignsTable({ campaigns }) {
                   go(c.id);
                 }
               }}
-              className="cursor-pointer border-b border-line transition-colors duration-150 last:border-0 hover:bg-[#fafaf8] focus-visible:bg-[#fafaf8]"
+              className="cursor-pointer transition-colors duration-150 focus-visible:bg-[#eef1f8]"
             >
               <td className="px-4 py-3 text-muted">
                 {fmtDate(c.createdAt)}

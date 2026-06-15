@@ -7,7 +7,7 @@ import Copilot from "./Copilot";
 import { Toaster } from "./toast";
 
 // Renders the full app shell, except on /login where it shows the bare page.
-export default function AppFrame({ mock, brandName, authEnabled, children }) {
+export default function AppFrame({ mock, brandName, authEnabled, activeModule, dueCount, children }) {
   const pathname = usePathname();
 
   if (pathname === "/login") {
@@ -22,7 +22,7 @@ export default function AppFrame({ mock, brandName, authEnabled, children }) {
   return (
     <>
       <div className="lg:flex">
-        <Sidebar mock={mock} brandName={brandName} authEnabled={authEnabled} />
+        <Sidebar mock={mock} brandName={brandName} authEnabled={authEnabled} activeModule={activeModule} dueCount={dueCount} />
         <div className="min-w-0 flex-1">
           <main className="mx-auto max-w-content px-6 py-8">{children}</main>
         </div>

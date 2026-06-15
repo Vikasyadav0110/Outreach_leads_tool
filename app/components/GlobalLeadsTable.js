@@ -136,7 +136,7 @@ export default function GlobalLeadsTable({ leads, mock }) {
     <div className="table-wrap">
       <table className="w-full min-w-[820px] text-sm">
         <thead>
-          <tr className="border-b border-line text-left text-xs font-medium text-muted">
+          <tr className="bg-[#f3f3f0] text-left text-xs font-medium uppercase tracking-wide text-muted">
             <th className="cursor-pointer px-4 py-3 hover:text-ink" onClick={() => toggleSort("name")}>Business{ind("name")}</th>
             <th className="px-4 py-3">Campaign</th>
             <th className="px-4 py-3">Domain</th>
@@ -203,6 +203,7 @@ export default function GlobalLeadsTable({ leads, mock }) {
           domain={selectedLead.domain}
           status={statuses[keyOf(selectedLead)] || DEFAULT_STATUS}
           notes={selectedLead.notes || ""}
+          deal={selectedLead.deal}
           updatedAt={selectedLead.updatedAt}
           createdAt={selectedLead.campaignCreatedAt}
           mock={mock}

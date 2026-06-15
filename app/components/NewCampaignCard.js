@@ -51,8 +51,10 @@ export default function NewCampaignCard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not start campaign.");
-      toast(mode === "ai" ? "Campaign created — finding leads…" : "Campaign created — generating outreach…");
-      router.push(`/campaign/${data.campaign.id}?autorun=1`);
+      // Don't auto-run the AI pipeline — that spends credits. Land on the
+      // campaign and let the user click "Run Pipeline" when ready.
+      toast("Campaign created — open it and click Run when ready.");
+      router.push(`/campaign/${data.campaign.id}`);
     } catch (e) {
       setError(e.message);
       setBusy(false);

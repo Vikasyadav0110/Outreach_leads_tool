@@ -1,22 +1,26 @@
 import Link from "next/link";
 import CampaignsTable from "@/app/components/CampaignsTable";
+import PageHeader from "@/app/components/PageHeader";
 import { listCampaigns } from "@/lib/db";
+import { moduleMeta } from "@/lib/modules";
+import { getActiveModule } from "@/lib/activeModule";
 
 export const dynamic = "force-dynamic";
 
 export default function CampaignsPage() {
-  const campaigns = listCampaigns();
+  const mod = getActiveModule();
+  const campaigns = listCampaigns(mod);
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="h-display text-xl text-ink">Campaigns</h1>
-          <p className="text-sm text-muted">{campaigns.length} total</p>
-        </div>
-        <Link href="/campaigns/new" className="btn-primary">
-          New campaign
-        </Link>
-      </div>
+      <PageHeader
+        title="Campaigns"
+        subtitle={`${moduleMeta(mod).label} · ${campaigns.length} total`}
+        action={
+          <Link href="/campaigns/new" className="btn-primary">
+            New campaign
+          </Link>
+        }
+      />
       <CampaignsTable campaigns={campaigns} />
     </div>
   );

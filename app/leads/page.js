@@ -1,19 +1,21 @@
 import LeadsManager from "@/app/components/LeadsManager";
+import PageHeader from "@/app/components/PageHeader";
 import { listAllLeads } from "@/lib/db";
 import { isMockMode } from "@/lib/anthropic";
+import { moduleMeta } from "@/lib/modules";
+import { getActiveModule } from "@/lib/activeModule";
 
 export const dynamic = "force-dynamic";
 
 export default function LeadsPage() {
-  const leads = listAllLeads();
+  const mod = getActiveModule();
+  const leads = listAllLeads(mod);
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="h-display text-xl text-ink">Leads Management</h1>
-        <p className="text-sm text-muted">
-          Every lead across all campaigns — browse by category or as one list. Click any lead to view its details.
-        </p>
-      </div>
+      <PageHeader
+        title="Leads Management"
+        subtitle={`${moduleMeta(mod).label} · browse by category or as one list. Click any lead to view its details.`}
+      />
       <LeadsManager leads={leads} mock={isMockMode()} />
     </div>
   );

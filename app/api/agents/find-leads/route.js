@@ -28,6 +28,8 @@ export async function POST(req) {
       domain: campaign.domain,
       city: campaign.city,
       niche: campaign.niche,
+      module: campaign.module,
+      campaignId,
     });
 
     saveAgentOutput(campaignId, "leads_json", leads);

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { APP_NAME } from "./Brand";
+import ModuleSwitcher from "./ModuleSwitcher";
 import { DocIcon, DatabaseIcon } from "./icons";
 
 // ---- icons ----
@@ -76,14 +77,28 @@ function CloseIcon(props) {
   );
 }
 
-const NAV = [
-  { href: "/", label: "Dashboard", icon: GridIcon, match: (p) => p === "/" },
-  { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon, match: (p) => p.startsWith("/campaign") },
-  { href: "/sources", label: "Sources", icon: DatabaseIcon, match: (p) => p.startsWith("/sources") },
-  { href: "/leads", label: "Leads", icon: UsersIcon, match: (p) => p.startsWith("/leads") },
-  { href: "/templates", label: "Templates", icon: DocIcon, match: (p) => p.startsWith("/templates") },
-  { href: "/analytics", label: "Analytics", icon: ChartIcon, match: (p) => p.startsWith("/analytics") },
-  { href: "/settings", label: "Settings", icon: GearIcon, match: (p) => p.startsWith("/settings") },
+// Grouped + ordered by how the app is actually used: find leads (Sources) →
+// review (Leads) → reach out (Campaigns). Workflow items carry a step number.
+const NAV_GROUPS = [
+  {
+    items: [{ href: "/", label: "Dashboard", icon: GridIcon, match: (p) => p === "/" }],
+  },
+  {
+    title: "Workflow",
+    items: [
+      { href: "/sources", label: "Sources", step: 1, icon: DatabaseIcon, match: (p) => p.startsWith("/sources") },
+      { href: "/leads", label: "Leads", step: 2, icon: UsersIcon, match: (p) => p.startsWith("/leads") },
+      { href: "/campaigns", label: "Campaigns", step: 3, icon: MegaphoneIcon, match: (p) => p.startsWith("/campaign") },
+    ],
+  },
+  {
+    title: "Manage",
+    items: [
+      { href: "/analytics", label: "Analytics", icon: ChartIcon, match: (p) => p.startsWith("/analytics") },
+      { href: "/templates", label: "Templates", icon: DocIcon, match: (p) => p.startsWith("/templates") },
+      { href: "/settings", label: "Settings", icon: GearIcon, match: (p) => p.startsWith("/settings") },
+    ],
+  },
 ];
 
 function Brandmark({ onClick, name = APP_NAME }) {
@@ -107,7 +122,7 @@ function MockBadge() {
   );
 }
 
-export default function Sidebar({ mock, brandName, authEnabled }) {
+export default function Sidebar({ mock, brandName, authEnabled, activeModule, dueCount = 0 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -125,26 +140,50 @@ export default function Sidebar({ mock, brandName, authEnabled }) {
 
   const navList = (
     <nav className="flex flex-col gap-1">
-      {NAV.map((item) => {
-        const Icon = item.icon;
-        const active = item.match(pathname);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={close}
-            aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-              active
-                ? "bg-accent/10 text-accent"
-                : "text-muted hover:bg-[#f3f3f0] hover:text-ink"
-            }`}
-          >
-            <Icon width="18" height="18" />
-            {item.label}
-          </Link>
-        );
-      })}
+      {NAV_GROUPS.map((group, gi) => (
+        <div key={gi} className={gi > 0 ? "mt-4" : ""}>
+          {group.title && (
+            <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wide text-muted/70">
+              {group.title}
+            </div>
+          )}
+          {group.items.map((item) => {
+            const Icon = item.icon;
+            const active = item.match(pathname);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={close}
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
+                  active ? "bg-accent/10 text-accent" : "text-muted hover:bg-[#f3f3f0] hover:text-ink"
+                }`}
+              >
+                <Icon width="18" height="18" />
+                <span className="flex-1">{item.label}</span>
+                {item.href === "/" && dueCount > 0 && (
+                  <span
+                    className="flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold text-white"
+                    title={`${dueCount} follow-up${dueCount > 1 ? "s" : ""} due`}
+                  >
+                    {dueCount}
+                  </span>
+                )}
+                {item.step && (
+                  <span
+                    className={`flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold ${
+                      active ? "bg-accent text-white" : "bg-neutral-200 text-muted"
+                    }`}
+                  >
+                    {item.step}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 
@@ -155,7 +194,10 @@ export default function Sidebar({ mock, brandName, authEnabled }) {
         <div className="px-1">
           <Brandmark name={brandName} />
         </div>
-        <Link href="/campaigns/new" className="btn-primary mt-6 w-full">
+        <div className="mt-5">
+          <ModuleSwitcher active={activeModule} />
+        </div>
+        <Link href="/campaigns/new" className="btn-primary mt-3 w-full">
           <PlusIcon width="16" height="16" />
           New campaign
         </Link>
@@ -215,7 +257,10 @@ export default function Sidebar({ mock, brandName, authEnabled }) {
                 <CloseIcon width="18" height="18" />
               </button>
             </div>
-            <Link href="/campaigns/new" onClick={close} className="btn-primary mt-6 w-full">
+            <div className="mt-5">
+              <ModuleSwitcher active={activeModule} />
+            </div>
+            <Link href="/campaigns/new" onClick={close} className="btn-primary mt-3 w-full">
               <PlusIcon width="16" height="16" />
               New campaign
             </Link>

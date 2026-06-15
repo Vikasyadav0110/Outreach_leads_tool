@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import GlobalLeadsTable from "./GlobalLeadsTable";
+import EmptyState from "./EmptyState";
 import { DomainChip } from "./Brand";
 import { LEAD_STATUSES, DEFAULT_STATUS } from "./status";
 
@@ -39,9 +40,10 @@ export default function Categories({ leads, mock }) {
 
   if (!leads || leads.length === 0) {
     return (
-      <div className="card p-10 text-center text-sm text-muted">
-        No leads yet. Run a campaign and its leads will appear here, grouped by category.
-      </div>
+      <EmptyState
+        title="No leads yet"
+        hint="Run a campaign and its leads will appear here, grouped by category."
+      />
     );
   }
 

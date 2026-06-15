@@ -42,6 +42,8 @@ export async function POST(req) {
       domain: campaign.domain,
       qualified: campaign.qualified,
       profile,
+      module: campaign.module,
+      campaignId,
     });
 
     saveAgentOutput(campaignId, "messages_json", messages);

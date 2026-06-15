@@ -15,15 +15,18 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Campaign not found." }, { status: 404 });
     }
 
-    const { leadName, status, notes } = await req.json();
+    const { leadName, status, notes, deal } = await req.json();
     if (!leadName || typeof leadName !== "string") {
       return NextResponse.json({ error: "leadName is required." }, { status: 400 });
     }
     if (status != null && !STATUS_KEYS.includes(status)) {
       return NextResponse.json({ error: "Invalid status." }, { status: 400 });
     }
+    if (deal != null && typeof deal !== "object") {
+      return NextResponse.json({ error: "Invalid deal." }, { status: 400 });
+    }
 
-    const outcome = setOutcome(id, { leadName: leadName.trim(), status, notes });
+    const outcome = setOutcome(id, { leadName: leadName.trim(), status, notes, deal });
     return NextResponse.json({ outcome });
   } catch (err) {
     return NextResponse.json(
