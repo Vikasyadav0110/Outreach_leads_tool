@@ -1,7 +1,7 @@
 import SourceRunner from "@/app/components/SourceRunner";
 import PageHeader from "@/app/components/PageHeader";
 import { listAdapters } from "@/lib/sources";
-import { listSourcedLeads, listIngestRuns, sourcedStats, listSavedSearches } from "@/lib/db";
+import { listSourcedLeads, listIngestRuns, sourcedStats, listSavedSearches, sourceHealth } from "@/lib/db";
 import { moduleMeta, pipelineOf } from "@/lib/modules";
 import { getActiveModule } from "@/lib/activeModule";
 
@@ -20,6 +20,10 @@ export default function SourcesPage() {
   const s = sourcedStats();
   const total = pipeline === "sell" ? s.sell : s.deliver;
   const savedSearches = listSavedSearches({ module: mod, scope: "source" });
+  // Per-connector health (yield, last status/error). Label by adapter id.
+  const labelById = Object.fromEntries(adapters.map((a) => [a.id, a.label]));
+  const health = sourceHealth(pipeline, adapters.map((a) => a.id))
+    .map((h) => ({ ...h, label: labelById[h.source] || h.source }));
 
   return (
     <div className="space-y-6">
@@ -35,6 +39,7 @@ export default function SourcesPage() {
         moduleLabel={meta.label}
         pipeline={pipeline}
         savedSearches={savedSearches}
+        health={health}
       />
     </div>
   );

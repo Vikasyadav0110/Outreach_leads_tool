@@ -85,7 +85,7 @@ export async function GET(req) {
         finishIngestRun(run.id, { found, added, status: "done" });
         send("done", { found, added });
       } catch (err) {
-        finishIngestRun(run.id, { found, added, status: "error" });
+        finishIngestRun(run.id, { found, added, status: "error", error: err?.message || "Ingestion failed" });
         send("error", { message: err?.message || "Ingestion failed" });
       } finally {
         controller.close();

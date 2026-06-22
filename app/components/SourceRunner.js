@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fmtDateTime } from "./format";
+import { fmtDateTime, fmtAge } from "./format";
 import { toast } from "./toast";
 import { KpiCard, ChartCard, HBarChart, AreaTrendChart } from "./charts";
 import { CHART } from "./chartColors";
@@ -181,7 +181,7 @@ function LeadTable({ leads, runningFirst, onPush, pushingId, selectable, selecte
   );
 }
 
-export default function SourceRunner({ adapters, initialLeads, runs = [], total = 0, moduleLabel, pipeline, savedSearches = [] }) {
+export default function SourceRunner({ adapters, initialLeads, runs = [], total = 0, moduleLabel, pipeline, savedSearches = [], health = [] }) {
   const router = useRouter();
   // Namespace persisted state by pipeline (deliver/sell == local/international)
   // so the two workspaces never read each other's drafts.
@@ -818,6 +818,44 @@ export default function SourceRunner({ adapters, initialLeads, runs = [], total 
             <ChartCard title="Sourced per week">
               <AreaTrendChart data={weekData} color={CHART.accent2} height={165} />
             </ChartCard>
+          </div>
+        </div>
+      )}
+
+      {/* ---- Source health ---- */}
+      {health.length > 0 && (
+        <div>
+          <h2 className="mb-3 text-sm font-semibold text-ink">Source health</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {health.map((h) => {
+              const dot = h.lastStatus === "error" ? "bg-danger" : h.lastStatus === "never" ? "bg-neutral-300" : "bg-success";
+              return (
+                <div key={h.source} className="card p-4">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
+                    <span className="truncate text-sm font-medium text-ink">{h.label}</span>
+                    <span className="ml-auto text-[11px] text-muted">
+                      {h.lastStatus === "never" ? "never run" : (mounted && h.lastRunAt ? fmtAge(h.lastRunAt) : "")}
+                    </span>
+                  </div>
+                  {h.lastStatus === "never" ? (
+                    <p className="mt-2 text-xs text-muted">No runs yet — try it from the form above.</p>
+                  ) : (
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                      <span><span className="font-medium text-ink tabular-nums">{h.runs}</span> runs</span>
+                      <span><span className="font-medium text-ink tabular-nums">{h.totalAdded}</span> added</span>
+                      <span><span className="font-medium text-ink tabular-nums">{h.avgAdded}</span> avg/run</span>
+                      {h.errorRuns > 0 && <span className="text-danger">{h.errorRuns} failed</span>}
+                    </div>
+                  )}
+                  {h.lastError && (
+                    <p className="mt-2 truncate rounded bg-red-50 px-2 py-1 text-[11px] text-danger" title={h.lastError}>
+                      ⚠ {h.lastError}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
