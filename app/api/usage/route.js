@@ -21,6 +21,7 @@ function keyStatus() {
     gemini: !!process.env.GEMINI_API_KEY,
     places: !!process.env.GOOGLE_PLACES_API_KEY,
     apollo: !!process.env.APOLLO_API_KEY,
+    hunter: !!process.env.HUNTER_API_KEY,
   };
 }
 

@@ -151,6 +151,8 @@ export default function ApiManagement() {
         <div className="flex flex-wrap gap-2">
           <KeyChip label="Anthropic" ok={keys.anthropic} />
           <KeyChip label="Gemini" ok={keys.gemini} />
+          <KeyChip label="Hunter (emails)" ok={keys.hunter} />
+          <KeyChip label="Apollo" ok={keys.apollo} />
         </div>
       </div>
 

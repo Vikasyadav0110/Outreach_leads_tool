@@ -8,6 +8,18 @@ import { KpiCard, ChartCard, HBarChart, AreaTrendChart } from "./charts";
 import { CHART } from "./chartColors";
 import { perWeek } from "@/lib/analytics";
 import { RESEARCH_MODELS, DEFAULT_RESEARCH_MODEL } from "@/lib/researchModels";
+import { draftKey, loadDraft, saveDraft, makeDebouncedSaver } from "./persist";
+
+// Guided "what are you trying to do?" → which source(s) fit. Selecting an intent
+// picks the source and flips the relevant preset, so users don't have to know
+// the catalog. Each maps to an existing adapter id.
+const INTENTS = [
+  { id: "local", label: "Local businesses to build sites for", source: "google-places", pipeline: "deliver" },
+  { id: "enterprise", label: "Big companies that outsource projects", source: "claude-research", enterpriseBuyers: true, pipeline: "sell" },
+  { id: "hiring", label: "Companies hiring developers (build signal)", source: "remoteok", pipeline: "sell" },
+  { id: "rfp", label: "Government / RFP buyers", source: "usaspending", pipeline: "sell" },
+  { id: "custom", label: "Describe my ideal client (AI)", source: "claude-research", pipeline: "sell" },
+];
 
 const PIPELINE_META = {
   deliver: { label: "Deliver", cls: "bg-blue-50 text-accent", hint: "your team" },
@@ -169,8 +181,12 @@ function LeadTable({ leads, runningFirst, onPush, pushingId, selectable, selecte
   );
 }
 
-export default function SourceRunner({ adapters, initialLeads, runs = [], total = 0, moduleLabel, pipeline }) {
+export default function SourceRunner({ adapters, initialLeads, runs = [], total = 0, moduleLabel, pipeline, savedSearches = [] }) {
   const router = useRouter();
+  // Namespace persisted state by pipeline (deliver/sell == local/international)
+  // so the two workspaces never read each other's drafts.
+  const ns = pipeline || "deliver";
+  const saveDraftDebounced = useRef(makeDebouncedSaver(400)).current;
   const [sourceId, setSourceId] = useState(adapters[0]?.id || "");
   const [term, setTerm] = useState("");
   const [location, setLocation] = useState("");
@@ -186,15 +202,99 @@ export default function SourceRunner({ adapters, initialLeads, runs = [], total 
   const [icp, setIcp] = useState({ role: "", industry: "", tech: "" });
   const [prompt, setPrompt] = useState("");
   const [researchModel, setResearchModel] = useState(DEFAULT_RESEARCH_MODEL);
+  const [enterpriseBuyers, setEnterpriseBuyers] = useState(false);
+  const [naics, setNaics] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [saved, setSaved] = useState(savedSearches);
   const isSell = pipeline === "sell";
   const esRef = useRef(null);
   const doneRef = useRef(false);
 
+  // The current form as a param bag — saved searches + drafts use this shape.
+  const formParams = () => ({ sourceId, term, location, limit, prompt, researchModel, naics, enterpriseBuyers, icp });
+
+  // Apply a saved/param bag back into the form (used by chips + history re-run).
+  function applyParams(p = {}) {
+    if (p.sourceId || p.source) setSourceId(p.sourceId || p.source);
+    if (p.term != null) setTerm(p.term);
+    if (p.location != null) setLocation(p.location);
+    if (p.limit != null) setLimit(Number(p.limit) || 12);
+    if (p.prompt != null) setPrompt(p.prompt);
+    if (p.researchModel || p.model) setResearchModel(p.researchModel || p.model);
+    if (p.naics != null) setNaics(p.naics);
+    if (typeof p.enterpriseBuyers === "boolean") setEnterpriseBuyers(p.enterpriseBuyers);
+    if (p.icp || p.role || p.industry || p.tech) {
+      setIcp({ role: p.icp?.role ?? p.role ?? "", industry: p.icp?.industry ?? p.industry ?? "", tech: p.icp?.tech ?? p.tech ?? "" });
+    }
+  }
+
   useEffect(() => setMounted(true), []);
+
+  // Hydrate the form draft + live results + selection for this source/module
+  // once mounted (avoids SSR hydration mismatch).
+  useEffect(() => {
+    if (!mounted) return;
+    const d = loadDraft(draftKey("src", "draft", ns, sourceId));
+    if (d) applyParams({ ...d, sourceId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, sourceId]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const l = loadDraft(draftKey("src", "live", ns), null);
+    if (Array.isArray(l) && l.length) setLive(l);
+    const s = loadDraft(draftKey("src", "sel", ns), null);
+    if (Array.isArray(s) && s.length) setSelectedIds(new Set(s));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted]);
+
+  // Persist the form draft (debounced) whenever inputs change.
+  useEffect(() => {
+    if (!mounted || !sourceId) return;
+    saveDraftDebounced(draftKey("src", "draft", ns, sourceId), formParams());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, sourceId, term, location, limit, prompt, researchModel, naics, enterpriseBuyers, icp]);
+
+  // Persist live results + selection so a refresh mid-triage doesn't lose them.
+  useEffect(() => {
+    if (mounted) saveDraft(draftKey("src", "live", ns), live.slice(0, 100));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live]);
+  useEffect(() => {
+    if (mounted) saveDraft(draftKey("src", "sel", ns), [...selectedIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIds]);
+
+  async function saveCurrentSearch() {
+    const name = window.prompt("Name this search:", term || prompt?.slice(0, 30) || selected?.label || "My search");
+    if (!name) return;
+    try {
+      const res = await fetch("/api/saved-searches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: "source", name, params: formParams() }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Could not save.");
+      setSaved((s) => [{ id: d.id, name, params: formParams() }, ...s]);
+      toast("Search saved.");
+    } catch (e) {
+      toast(e.message, "error");
+    }
+  }
+
+  async function deleteSavedSearch(id) {
+    setSaved((s) => s.filter((x) => x.id !== id));
+    try {
+      await fetch(`/api/saved-searches/${id}`, { method: "DELETE" });
+    } catch {
+      /* ignore */
+    }
+  }
 
   const selected = adapters.find((a) => a.id === sourceId);
   const isClaude = selected?.id === "claude-research";
+  const isProcurement = selected?.id === "usaspending" || selected?.id === "samgov";
   const reco = RECO_BY_SOURCE[selected?.id] || { count: 8, why: "a balanced batch for this source" };
   const lastRun = runs[0] || null;
   const liveSources = adapters.filter((a) => a.ready).length;
@@ -228,10 +328,12 @@ export default function SourceRunner({ adapters, initialLeads, runs = [], total 
     doneRef.current = false;
 
     const params = new URLSearchParams({ source: sourceId, term, location, limit: String(limit), pipeline });
-    if (isClaude && prompt.trim()) {
-      params.set("prompt", prompt.trim());
+    if (isClaude) {
+      if (prompt.trim()) params.set("prompt", prompt.trim());
       params.set("model", researchModel);
+      if (enterpriseBuyers) params.set("enterpriseBuyers", "1");
     }
+    if (isProcurement && naics.trim()) params.set("naics", naics.trim());
     if (isSell && !isClaude) {
       if (icp.role) params.set("role", icp.role);
       if (icp.industry) params.set("industry", icp.industry);
@@ -381,6 +483,56 @@ export default function SourceRunner({ adapters, initialLeads, runs = [], total 
           <div className="card space-y-4 p-5">
             <h2 className="text-sm font-semibold text-ink">Run a search</h2>
 
+            {/* Guided intent picker — "what are you trying to do?" → a source. */}
+            {(() => {
+              const intents = INTENTS.filter((it) => adapters.some((a) => a.id === it.source));
+              if (!intents.length) return null;
+              return (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-medium uppercase tracking-wide text-muted">What are you trying to do?</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {intents.map((it) => (
+                      <button
+                        key={it.id}
+                        type="button"
+                        onClick={() => {
+                          setSourceId(it.source);
+                          if (it.enterpriseBuyers != null) setEnterpriseBuyers(it.enterpriseBuyers);
+                        }}
+                        className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                          sourceId === it.source ? "border-accent bg-accent/10 text-accent" : "border-line bg-white text-muted hover:text-ink"
+                        }`}
+                      >
+                        {it.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Saved searches — one click fills the form (no auto-run). */}
+            {saved.length > 0 && (
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted">Saved searches</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {saved.map((sv) => (
+                    <span key={sv.id} className="group inline-flex items-center gap-1 rounded-full border border-line bg-white px-2.5 py-1 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => { applyParams(sv.params); fetch(`/api/saved-searches/${sv.id}`, { method: "PATCH" }).catch(() => {}); toast(`Loaded "${sv.name}" — review and Run.`); }}
+                        className="text-ink hover:text-accent"
+                        title="Load into the form"
+                      >
+                        {sv.name}
+                      </button>
+                      <button type="button" onClick={() => deleteSavedSearch(sv.id)} className="text-muted hover:text-danger" title="Delete">×</button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Source picker — sources for this module */}
             <div className="space-y-1.5">
               <span className="text-[11px] font-medium uppercase tracking-wide text-muted">Source</span>
@@ -392,38 +544,65 @@ export default function SourceRunner({ adapters, initialLeads, runs = [], total 
                       key={a.id}
                       type="button"
                       onClick={() => setSourceId(a.id)}
-                      className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                      className={`flex w-full flex-col gap-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                         active ? "border-accent bg-accent/5" : "border-line bg-white hover:bg-[#f7f7f5]"
                       }`}
                     >
-                      <span className="flex items-center gap-2">
-                        <span className={`h-3.5 w-3.5 shrink-0 rounded-full border ${active ? "border-accent bg-accent" : "border-line"}`} />
-                        <span className="font-medium text-ink">{a.label}</span>
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2">
+                          <span className={`h-3.5 w-3.5 shrink-0 rounded-full border ${active ? "border-accent bg-accent" : "border-line"}`} />
+                          <span className="font-medium text-ink">{a.label}</span>
+                        </span>
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${a.ready ? "bg-green-50 text-success" : "bg-amber-50 text-amber-700"}`}>
+                          {a.ready ? "Live" : "Demo"}
+                        </span>
                       </span>
-                      <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${a.ready ? "bg-green-50 text-success" : "bg-amber-50 text-amber-700"}`}>
-                        {a.ready ? "Live" : "Sim"}
-                      </span>
+                      {a.description && <span className="pl-5.5 text-[11px] leading-snug text-muted">{a.description}</span>}
+                      {!a.ready && a.requiresKey && (
+                        <span className="pl-5.5 text-[11px] text-amber-700">Needs {a.requiresKey} — running in demo mode.</span>
+                      )}
                     </button>
                   );
                 })
               ) : (
                 <div className="rounded-lg border border-dashed border-line bg-[#fafaf8] px-3 py-3 text-xs text-muted">
-                  No source connected for {moduleLabel} yet. Connect a provider (Upwork API, jobs feed, RFP board) to enable sourcing for this module.
+                  No source connected for {moduleLabel} yet. Add a source API key in <code className="rounded bg-white px-1">.env.local</code> (see Settings → API Management for which keys unlock what), then restart.
                 </div>
               )}
             </div>
+
+            {/* Persistent demo banner when the chosen source isn't live. */}
+            {selected && !selected.ready && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                <span className="font-semibold">Demo mode:</span> {selected.label} has no API key, so results are simulated (not real businesses). Add {selected.requiresKey || "the key"} to go live.
+              </div>
+            )}
 
             {/* Form — grid aligned */}
             <div className="space-y-3 border-t border-line pt-4">
               {isClaude ? (
                 <div>
-                  <label className="label" htmlFor="src-prompt">Describe your ideal client</label>
+                  {/* Quick-pick: target enterprises that OUTSOURCE projects. */}
+                  <button
+                    type="button"
+                    onClick={() => { setEnterpriseBuyers((v) => !v); }}
+                    aria-pressed={enterpriseBuyers}
+                    className={`mb-2 w-full rounded-lg border px-3 py-2 text-left text-xs transition-colors ${
+                      enterpriseBuyers ? "border-accent bg-accent/5 text-ink" : "border-line bg-white text-muted hover:border-accent/40"
+                    }`}
+                  >
+                    <span className="font-semibold">{enterpriseBuyers ? "✓ " : ""}Enterprise Buyers preset</span>
+                    {" "}— find big companies/agencies that outsource software projects (RFPs, vendor programs, offshore teams). No prompt needed.
+                  </button>
+                  <label className="label" htmlFor="src-prompt">
+                    {enterpriseBuyers ? "Refine (optional) — market / industry" : "Describe your ideal client"}
+                  </label>
                   <textarea
                     id="src-prompt"
                     className="input min-h-20"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="e.g. Series-A fintech startups in the US hiring backend engineers"
+                    placeholder={enterpriseBuyers ? "Optional: e.g. focus on US healthcare, or India BFSI" : "e.g. Series-A fintech startups in the US hiring backend engineers"}
                   />
                   <div className="mt-2">
                     <label className="label" htmlFor="src-model">Model</label>
@@ -452,6 +631,19 @@ export default function SourceRunner({ adapters, initialLeads, runs = [], total 
                     onChange={(e) => setTerm(e.target.value)}
                     placeholder={isSell ? "fintech, healthcare…" : "plumbers, dentists…"}
                   />
+                  {isProcurement && (
+                    <div className="mt-2">
+                      <label className="label" htmlFor="src-naics">NAICS code (optional)</label>
+                      <input
+                        id="src-naics"
+                        className="input"
+                        value={naics}
+                        onChange={(e) => setNaics(e.target.value)}
+                        placeholder="541511 (custom software) — default"
+                      />
+                      <p className="mt-1 text-[11px] text-muted">Finds organizations that award/post software contracts under this code.</p>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3">
@@ -512,7 +704,10 @@ export default function SourceRunner({ adapters, initialLeads, runs = [], total 
               {running ? (
                 <button type="button" onClick={stop} className="btn-ghost w-full">Stop</button>
               ) : (
-                <button type="button" onClick={run} disabled={!sourceId || (isClaude && !prompt.trim())} className="btn-primary w-full">Run sourcing</button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={run} disabled={!sourceId || (isClaude && !enterpriseBuyers && !prompt.trim())} className="btn-primary flex-1">Run sourcing</button>
+                  <button type="button" onClick={saveCurrentSearch} disabled={!sourceId} className="btn-ghost px-3" title="Save these inputs to reuse later">Save</button>
+                </div>
               )}
             </div>
 
@@ -645,6 +840,7 @@ export default function SourceRunner({ adapters, initialLeads, runs = [], total 
                     <th>Found</th>
                     <th>New</th>
                     <th>Status</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -657,6 +853,20 @@ export default function SourceRunner({ adapters, initialLeads, runs = [], total 
                       <td className="tabular-nums">{r.found}</td>
                       <td className="tabular-nums">{r.added}</td>
                       <td><StatusBadge status={r.status} /></td>
+                      <td>
+                        {r.params ? (
+                          <button
+                            type="button"
+                            onClick={() => { applyParams(r.params); toast("Loaded — review and Run."); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                            className="rounded-md border border-line bg-white px-2 py-0.5 text-xs font-medium text-accent hover:bg-accent/5"
+                            title="Load this run's params into the form"
+                          >
+                            Re-run
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted/60">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

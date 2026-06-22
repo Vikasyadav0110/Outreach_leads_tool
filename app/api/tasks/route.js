@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { listTasks, completeTask, snoozeTask, createTask } from "@/lib/db";
+import { listTasks, completeTask, snoozeTask, createTask, advanceSequence } from "@/lib/db";
 import { getActiveModule } from "@/lib/activeModule";
 import { requireApiAuth } from "@/lib/authGuard";
 
@@ -27,8 +27,11 @@ export async function POST(req) {
       if (!Number.isInteger(body.id)) {
         return NextResponse.json({ error: "id is required." }, { status: 400 });
       }
+      // Capture the next sequence step BEFORE marking done, then schedule it
+      // (advanceSequence reads the task's step_index; completing doesn't remove it).
       completeTask(body.id);
-      return NextResponse.json({ ok: true });
+      const nextTaskId = advanceSequence(body.id);
+      return NextResponse.json({ ok: true, advanced: !!nextTaskId });
     }
     if (action === "snooze") {
       if (!Number.isInteger(body.id)) {

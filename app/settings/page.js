@@ -47,6 +47,11 @@ export default function SettingsPage() {
     accentKey: "blue",
     aiProvider: "anthropic",
   });
+  // Key fields are kept separate: never pre-filled, always write-only
+  const [anthropicKey, setAnthropicKey] = useState("");
+  const [geminiKey, setGeminiKey] = useState("");
+  const [hasAnthropicKey, setHasAnthropicKey] = useState(false);
+  const [hasGeminiKey, setHasGeminiKey] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -63,6 +68,8 @@ export default function SettingsPage() {
           savedAccentRef.current = d.settings.accentKey || "blue";
         }
         setMock(!!d.mockMode);
+        setHasAnthropicKey(!!d.hasAnthropicKey);
+        setHasGeminiKey(!!d.hasGeminiKey);
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -75,14 +82,23 @@ export default function SettingsPage() {
     setSaving(true);
     setError("");
     try {
+      const body = { ...form };
+      // Only include key fields when the user typed something; empty string = clear key.
+      if (anthropicKey !== "") body.anthropicKey = anthropicKey;
+      if (geminiKey !== "") body.geminiKey = geminiKey;
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not save.");
       savedAccentRef.current = form.accentKey || "blue";
+      if (data.hasAnthropicKey !== undefined) setHasAnthropicKey(data.hasAnthropicKey);
+      if (data.hasGeminiKey !== undefined) setHasGeminiKey(data.hasGeminiKey);
+      // Re-check mock mode after a key save.
+      setMock(!data.hasAnthropicKey && !data.hasGeminiKey);
+      setAnthropicKey(""); setGeminiKey(""); // clear input after save
       toast("Settings saved.");
     } catch (e) {
       setError(e.message);
@@ -99,6 +115,55 @@ export default function SettingsPage() {
         title="Settings"
         subtitle="Your profile personalizes outreach; branding lets you white-label the app."
       />
+
+      {/* API Keys — in-app key entry so non-developers can leave mock mode */}
+      <div className="card p-5">
+        <h2 className="text-base font-semibold text-ink">API Keys</h2>
+        <p className="mt-1 text-sm text-muted">
+          Enter keys here to enable live AI. Keys are stored in the local database and never
+          sent back to the browser. Environment variables (<code className="rounded bg-[#f3f3f0] px-1">.env.local</code>) always take priority.
+        </p>
+        <div className="mt-4 space-y-4">
+          {/* Anthropic */}
+          <div>
+            <div className="flex items-center gap-2">
+              <label className="label mb-0" htmlFor="anthropicKey">Anthropic API key</label>
+              {hasAnthropicKey
+                ? <span className="badge bg-emerald-50 text-emerald-700">✓ Key saved</span>
+                : <span className="badge bg-amber-50 text-amber-700">Not configured</span>}
+            </div>
+            <input
+              id="anthropicKey"
+              type="password"
+              autoComplete="new-password"
+              className="input mt-1 max-w-sm font-mono"
+              placeholder={hasAnthropicKey ? "Leave blank to keep existing key" : "sk-ant-api03-…"}
+              value={anthropicKey}
+              onChange={(e) => setAnthropicKey(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-muted">Get your key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">console.anthropic.com</a>.</p>
+          </div>
+          {/* Gemini */}
+          <div>
+            <div className="flex items-center gap-2">
+              <label className="label mb-0" htmlFor="geminiKey">Google Gemini API key</label>
+              {hasGeminiKey
+                ? <span className="badge bg-emerald-50 text-emerald-700">✓ Key saved</span>
+                : <span className="badge bg-neutral-100 text-muted">Optional</span>}
+            </div>
+            <input
+              id="geminiKey"
+              type="password"
+              autoComplete="new-password"
+              className="input mt-1 max-w-sm font-mono"
+              placeholder={hasGeminiKey ? "Leave blank to keep existing key" : "AIza…"}
+              value={geminiKey}
+              onChange={(e) => setGeminiKey(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-muted">Get your key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">aistudio.google.com</a>.</p>
+          </div>
+        </div>
+      </div>
 
       {/* AI connection status (provider-aware) */}
       {!loading &&

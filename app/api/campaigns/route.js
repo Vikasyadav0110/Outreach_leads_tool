@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import {
-  createCampaign,
-  createSeededCampaign,
-  listCampaigns,
+  createCampaignV2,
+  upsertLeadByIdentity,
+  addLeadsToCampaign,
+  getCampaignV2,
+  listCampaignsV2,
 } from "@/lib/db";
 import { isValidDomain } from "@/lib/prompts";
 import { requireApiAuth } from "@/lib/authGuard";
@@ -14,7 +16,7 @@ export async function GET() {
   const denied = await requireApiAuth();
   if (denied) return denied;
   try {
-    return NextResponse.json({ campaigns: listCampaigns(getActiveModule()) });
+    return NextResponse.json({ campaigns: listCampaignsV2(getActiveModule()) });
   } catch (err) {
     return NextResponse.json(
       { error: err?.message || "Could not load campaigns." },
@@ -27,7 +29,18 @@ export async function POST(req) {
   const denied = await requireApiAuth();
   if (denied) return denied;
   try {
-    const { domain, city, niche, business, leads } = await req.json();
+    const payload = await req.json();
+    // NEW model: create an empty named campaign (leads added separately).
+    if (payload.name != null && payload.domain == null) {
+      const campaign = createCampaignV2({
+        module: getActiveModule(),
+        name: String(payload.name).trim() || "New campaign",
+        channel: ["email", "whatsapp", "call", "multi"].includes(payload.channel) ? payload.channel : "multi",
+      });
+      return NextResponse.json({ campaign });
+    }
+
+    const { domain, city, niche, business, leads } = payload;
     if (!isValidDomain(domain)) {
       return NextResponse.json({ error: "Pick a valid domain." }, { status: 400 });
     }
@@ -48,48 +61,48 @@ export async function POST(req) {
         : null;
 
     if (seeds) {
-      const leadRows = [];
-      const cards = [];
+      // Push from Sources → normalized model: upsert each sourced business into
+      // the leads hub (carrying its real phone/email as a pre-filled card so it's
+      // immediately contactable), create a campaign, and link them.
+      const campaign = createCampaignV2({ module, name: `${niche.trim()} · ${city.trim()}`, channel: "multi" });
+      const leadIds = [];
       for (const b of seeds) {
         const name = (b.name || "").trim();
         if (!name) continue;
         const gap = (b.gap || b.signal || "Digital presence to be assessed").trim();
-        leadRows.push({
+        const hasContact = (b.phone || b.email || b.contact);
+        const { id } = upsertLeadByIdentity({
           name,
-          category: (b.category || niche).trim(),
+          module,
           city: (b.city || city).trim(),
-          website: (b.website || "").trim() || "none",
+          niche: niche.trim(),
+          domain,
+          website: (b.website || "").trim(),
           score: Number.isFinite(b.score) ? b.score : 8,
-          gap,
-          source: b.source || "Sourced",
           priority: "HIGH",
+          gap,
+          phone: b.phone || "",
+          // A real sourced contact pre-qualifies the lead (card present).
+          card: hasContact
+            ? {
+                name,
+                exactGap: gap,
+                decisionMaker: (b.contact || "").trim(),
+                whatsapp: (b.phone || "").toString().trim(),
+                email: (b.email || "").toString().trim(),
+                personalizationHook: b.signal ? `Sourced signal: ${b.signal}` : "",
+                serviceTag: "Website + Google Business setup",
+              }
+            : null,
         });
-        // Pre-fill a qualification card so the REAL phone we sourced is
-        // immediately usable for WhatsApp/Call without re-running Agent 2.
-        // Numbers/emails carry through verbatim — we never fabricate them.
-        cards.push({
-          name,
-          exactGap: gap,
-          decisionMaker: (b.contact || "Unknown").trim(),
-          whatsapp: (b.phone || "Not found").toString().trim(),
-          email: (b.email || "Not found").toString().trim(),
-          personalizationHook: b.signal ? `Sourced signal: ${b.signal}` : "",
-          serviceTag: "Website + Google Business setup",
-        });
+        leadIds.push(id);
       }
-      // Atomic: campaign + leads + cards in one transaction (no half-built state).
-      const seeded = createSeededCampaign({
-        domain,
-        city: city.trim(),
-        niche: niche.trim(),
-        module,
-        leads: leadRows,
-        cards,
-      });
-      return NextResponse.json({ campaign: seeded, seeded: leadRows.length });
+      const added = addLeadsToCampaign(campaign.id, leadIds);
+      return NextResponse.json({ campaign: getCampaignV2(campaign.id), seeded: added });
     }
 
-    const campaign = createCampaign({ domain, city: city.trim(), niche: niche.trim(), module });
+    // Empty campaign (legacy specific-business mode w/o leads) → just create v2.
+    const campaign = createCampaignV2({ module, name: `${niche.trim()} · ${city.trim()}`, channel: "multi" });
     return NextResponse.json({ campaign });
   } catch (err) {
     return NextResponse.json(

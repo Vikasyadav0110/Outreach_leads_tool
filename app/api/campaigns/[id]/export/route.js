@@ -1,4 +1,4 @@
-import { getCampaign } from "@/lib/db";
+import { getCampaignV2 } from "@/lib/db";
 import { requireApiAuth } from "@/lib/authGuard";
 
 export const runtime = "nodejs";
@@ -6,14 +6,14 @@ export const runtime = "nodejs";
 export async function GET(_req, { params }) {
   const denied = await requireApiAuth();
   if (denied) return denied;
-  const campaign = getCampaign(Number(params.id));
+  const campaign = getCampaignV2(Number(params.id));
   if (!campaign) {
     return new Response("Campaign not found.", { status: 404 });
   }
 
   const txt = buildKit(campaign);
-  const safeCity = (campaign.city || "campaign").replace(/[^a-z0-9]+/gi, "-");
-  const filename = `outreach-kit-${campaign.domain}-${safeCity}-${campaign.id}.txt`;
+  const safe = (campaign.name || "campaign").replace(/[^a-z0-9]+/gi, "-");
+  const filename = `outreach-kit-${safe}-${campaign.id}.txt`;
 
   return new Response(txt, {
     status: 200,
@@ -28,14 +28,14 @@ function buildKit(c) {
   const lines = [];
   const rule = "=".repeat(64);
   lines.push(rule);
-  lines.push(`OUTREACH KIT — Campaign #${c.id}`);
-  lines.push(`Domain: ${c.domain}   City: ${c.city}   Niche: ${c.niche}`);
+  lines.push(`OUTREACH KIT — ${c.name} (#${c.id})`);
+  lines.push(`Channel: ${c.channel}   Leads: ${c.members?.length || 0}`);
   lines.push(`Generated: ${new Date().toISOString()}`);
   lines.push(rule, "");
 
   const messages = Array.isArray(c.messages) ? c.messages : [];
   if (messages.length === 0) {
-    lines.push("No messages generated yet. Run the pipeline through Agent 3.");
+    lines.push("No messages generated yet. Use Generate Messages on the campaign.");
     return lines.join("\n");
   }
 

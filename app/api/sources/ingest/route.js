@@ -32,6 +32,11 @@ export async function GET(req) {
   // enterprise adapters like Apollo; ignored by others).
   const prompt = (searchParams.get("prompt") || "").trim();
   const model = (searchParams.get("model") || "").trim();
+  // Procurement filters (USASpending / SAM.gov); ignored by other adapters.
+  const naics = (searchParams.get("naics") || "").trim();
+  const postedFrom = (searchParams.get("postedFrom") || "").trim();
+  // AI Research "Enterprise Buyers" preset toggle.
+  const enterpriseBuyers = searchParams.get("enterpriseBuyers") === "1";
   const icp = {
     role: (searchParams.get("role") || "").trim(),
     industry: (searchParams.get("industry") || "").trim(),
@@ -51,6 +56,8 @@ export async function GET(req) {
         source: adapter.id,
         pipeline,
         query: [term, location].filter(Boolean).join(" · "),
+        // Full param bag → enables one-click "Re-run" from history.
+        params: { source: adapter.id, term, location, limit, prompt, model, naics, postedFrom, enterpriseBuyers, ...icp },
       });
 
       send("start", {
@@ -64,7 +71,7 @@ export async function GET(req) {
       let found = 0;
       let added = 0;
       try {
-        for await (const raw of adapter.fetch({ term, location, limit, pipeline, prompt, model, ...icp })) {
+        for await (const raw of adapter.fetch({ term, location, limit, pipeline, prompt, model, naics, postedFrom, enterpriseBuyers, ...icp })) {
           found++;
           const { added: isNew, lead } = insertSourcedLead({
             ...raw,

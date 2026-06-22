@@ -1,21 +1,24 @@
-import Link from "next/link";
-import NewCampaignCard from "@/app/components/NewCampaignCard";
+import PageHeader from "@/app/components/PageHeader";
+import CampaignWizard from "@/app/components/CampaignWizard";
+import { listLeads } from "@/lib/db";
+import { isMockMode } from "@/lib/anthropic";
+import { getActiveModule } from "@/lib/activeModule";
 
 export const dynamic = "force-dynamic";
 
 export default function NewCampaignPage() {
+  const mod = getActiveModule();
+  // Campaigns are built from qualified leads (reusable across campaigns).
+  const qualifiedLeads = listLeads(mod).filter((l) => l.qualified);
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/" className="text-sm text-muted hover:text-ink">
-          ← Dashboard
-        </Link>
-        <h1 className="h-display mt-1 text-xl text-ink">New campaign</h1>
-        <p className="text-sm text-muted">
-          Pick a domain, city, and niche — the 4-agent pipeline runs end to end.
-        </p>
-      </div>
-      <NewCampaignCard />
+      <PageHeader
+        backHref="/campaigns"
+        backLabel="All campaigns"
+        title="New campaign"
+        subtitle="Select qualified leads, generate messages, then review & send."
+      />
+      <CampaignWizard qualifiedLeads={qualifiedLeads} mock={isMockMode()} />
     </div>
   );
 }

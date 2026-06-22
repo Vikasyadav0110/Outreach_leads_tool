@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import CopyButton from "./CopyButton";
+import StatusSelect from "./StatusSelect";
+import StatusBadge from "./StatusBadge";
 import { toDigits, gmailHref, waHref } from "./contact";
 
 const TABS = [
@@ -50,12 +52,23 @@ function PhoneIcon() {
 
 // ---- send button (anchor when actionable, disabled button otherwise) -----
 
-function SendButton({ href, external, variant, icon, label, disabledLabel }) {
+function SendButton({ href, external, variant, icon, label, disabledLabel, onSent, mock }) {
   const styles = {
     whatsapp: "bg-success text-white hover:bg-[#046c4e]",
     email: "bg-accent text-white hover:bg-[#1647b8]",
     call: "border border-line bg-white text-ink hover:bg-[#f3f3f0]",
   };
+
+  // In mock mode, always render a disabled button — never open wa.me/mailto/tel
+  // to a fabricated number/address, regardless of whether the href resolved.
+  if (mock) {
+    return (
+      <button type="button" disabled aria-disabled="true" className="btn cursor-not-allowed border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700 opacity-80">
+        {icon}
+        {label} <span className="font-normal opacity-70">(Simulated)</span>
+      </button>
+    );
+  }
 
   if (!href) {
     return (
@@ -69,6 +82,7 @@ function SendButton({ href, external, variant, icon, label, disabledLabel }) {
   return (
     <a
       href={href}
+      onClick={onSent}
       {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       className={`btn px-3 py-1.5 text-xs ${styles[variant]}`}
     >
@@ -80,19 +94,47 @@ function SendButton({ href, external, variant, icon, label, disabledLabel }) {
 
 // ---- one message --------------------------------------------------------
 
-function MessageBlock({ msg, contact, mock }) {
+function MessageBlock({ msg, contact, mock, onMark, saving }) {
   const [tab, setTab] = useState("email");
+  const [nudge, setNudge] = useState(false); // pulse "Mark as sent" after a Send click
 
   const emailText = `Subject: ${msg.email?.subject || ""}\n\n${msg.email?.body || ""}`;
 
+  // In mock mode, never build real hrefs — pass them as null so SendButton
+  // shows the disabled (Simulated) state via its mock guard.
   const digits = mock ? null : toDigits(contact?.whatsapp);
   const waLink = mock ? null : waHref(contact?.whatsapp, msg.whatsapp);
   const mailLink = mock ? null : gmailHref(contact?.email, msg.email?.subject, msg.email?.body);
   const telHref = digits ? `tel:+${digits}` : null;
 
+  // Mark controls are opt-in: only when a writer + lead identity are present
+  // (the campaign page passes them; the wizard does not).
+  const canMark = !!onMark && msg.leadId != null;
+  const engagement = msg.engagement || "";
+  const onSent = () => setNudge(true);
+
   return (
-    <div className="card p-5">
-      <h4 className="text-sm font-semibold text-ink">{msg.name}</h4>
+    <div id={msg.leadId != null ? `lead-${msg.leadId}` : undefined} className="card p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold text-ink">{msg.name}</h4>
+        {canMark && (
+          <div className="flex items-center gap-2">
+            {!engagement || engagement === "new" ? (
+              <button
+                type="button"
+                onClick={() => { setNudge(false); onMark(msg.leadId, "contacted"); }}
+                disabled={saving}
+                className={`rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white transition hover:bg-[#1647b8] disabled:opacity-50 ${nudge ? "ring-2 ring-accent ring-offset-1 animate-pulse" : ""}`}
+              >
+                {saving ? "Saving…" : "✓ Mark as sent"}
+              </button>
+            ) : (
+              <StatusBadge status={engagement} kind="engagement" />
+            )}
+            <StatusSelect value={engagement || "new"} saving={saving} onChange={(next) => onMark(msg.leadId, next)} />
+          </div>
+        )}
+      </div>
 
       <div className="mt-3 flex gap-1 border-b border-line">
         {TABS.map((t) => (
@@ -121,11 +163,13 @@ function MessageBlock({ msg, contact, mock }) {
               <div className="flex items-center gap-2">
                 <SendButton
                   href={mailLink}
+                  mock={mock}
                   external
                   variant="email"
                   icon={<MailIcon />}
                   label="Send email"
                   disabledLabel="No email"
+                  onSent={onSent}
                 />
                 <CopyButton text={emailText} label="Copy" />
               </div>
@@ -145,11 +189,13 @@ function MessageBlock({ msg, contact, mock }) {
               <div className="flex items-center gap-2">
                 <SendButton
                   href={waLink}
+                  mock={mock}
                   external
                   variant="whatsapp"
                   icon={<WhatsAppIcon />}
                   label="Send on WhatsApp"
                   disabledLabel="No number"
+                  onSent={onSent}
                 />
                 <CopyButton text={msg.whatsapp} label="Copy" />
               </div>
@@ -169,6 +215,7 @@ function MessageBlock({ msg, contact, mock }) {
               <div className="flex items-center gap-2">
                 <SendButton
                   href={telHref}
+                  mock={mock}
                   variant="call"
                   icon={<PhoneIcon />}
                   label="Call"
@@ -187,17 +234,19 @@ function MessageBlock({ msg, contact, mock }) {
   );
 }
 
-export default function MessageTabs({ messages, qualified, mock }) {
+export default function MessageTabs({ messages, qualified, mock, onMark, savingLeadId }) {
   if (!messages || messages.length === 0) return null;
   const contacts = buildContactMap(qualified);
   return (
     <div className="space-y-4">
       {messages.map((m, i) => (
         <MessageBlock
-          key={i}
+          key={m.leadId ?? i}
           msg={m}
           contact={contacts.get((m.name || "").trim().toLowerCase())}
           mock={mock}
+          onMark={onMark}
+          saving={savingLeadId != null && savingLeadId === m.leadId}
         />
       ))}
     </div>

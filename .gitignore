@@ -9,10 +9,8 @@
 .env.local
 .env*.local
 
-# sqlite db + wal files
-/data/*.db
-/data/*.db-shm
-/data/*.db-wal
+# sqlite db + wal files (incl. backups — contain real lead data)
+/data/
 
 # os
 .DS_Store

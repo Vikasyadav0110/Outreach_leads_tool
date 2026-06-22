@@ -62,6 +62,26 @@ function ChartIcon(props) {
     </svg>
   );
 }
+function SequenceIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="5" cy="6" r="2" />
+      <circle cx="5" cy="18" r="2" />
+      <path d="M5 8v8" />
+      <path d="M11 6h8" />
+      <path d="M11 12h8" />
+      <path d="M11 18h8" />
+    </svg>
+  );
+}
+function ReportIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v10M9.5 9.5a2.5 2.5 0 0 1 2.5-1.5c1.4 0 2.5.8 2.5 1.8 0 2.4-5 1-5 3.4 0 1 1.1 1.8 2.5 1.8a2.5 2.5 0 0 0 2.5-1.5" />
+    </svg>
+  );
+}
 function MenuIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -81,7 +101,7 @@ function CloseIcon(props) {
 // review (Leads) → reach out (Campaigns). Workflow items carry a step number.
 const NAV_GROUPS = [
   {
-    items: [{ href: "/", label: "Dashboard", icon: GridIcon, match: (p) => p === "/" }],
+    items: [{ href: "/", label: "Today", icon: GridIcon, match: (p) => p === "/" }],
   },
   {
     title: "Workflow",
@@ -89,12 +109,14 @@ const NAV_GROUPS = [
       { href: "/sources", label: "Sources", step: 1, icon: DatabaseIcon, match: (p) => p.startsWith("/sources") },
       { href: "/leads", label: "Leads", step: 2, icon: UsersIcon, match: (p) => p.startsWith("/leads") },
       { href: "/campaigns", label: "Campaigns", step: 3, icon: MegaphoneIcon, match: (p) => p.startsWith("/campaign") },
+      { href: "/sequences", label: "Sequences", icon: SequenceIcon, match: (p) => p.startsWith("/sequences") },
     ],
   },
   {
     title: "Manage",
     items: [
       { href: "/analytics", label: "Analytics", icon: ChartIcon, match: (p) => p.startsWith("/analytics") },
+      { href: "/reports", label: "Reports", icon: ReportIcon, match: (p) => p.startsWith("/reports") },
       { href: "/templates", label: "Templates", icon: DocIcon, match: (p) => p.startsWith("/templates") },
       { href: "/settings", label: "Settings", icon: GearIcon, match: (p) => p.startsWith("/settings") },
     ],

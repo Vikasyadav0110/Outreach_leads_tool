@@ -1,7 +1,7 @@
 import Link from "next/link";
-import CampaignsTable from "@/app/components/CampaignsTable";
+import CampaignsListV2 from "@/app/components/CampaignsListV2";
 import PageHeader from "@/app/components/PageHeader";
-import { listCampaigns } from "@/lib/db";
+import { listCampaignsV2 } from "@/lib/db";
 import { moduleMeta } from "@/lib/modules";
 import { getActiveModule } from "@/lib/activeModule";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default function CampaignsPage() {
   const mod = getActiveModule();
-  const campaigns = listCampaigns(mod);
+  const campaigns = listCampaignsV2(mod);
   return (
     <div className="space-y-6">
       <PageHeader
@@ -21,7 +21,7 @@ export default function CampaignsPage() {
           </Link>
         }
       />
-      <CampaignsTable campaigns={campaigns} />
+      <CampaignsListV2 campaigns={campaigns} />
     </div>
   );
 }

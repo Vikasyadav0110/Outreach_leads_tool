@@ -12,3 +12,20 @@ export async function saveOutcome(campaignId, body) {
     return false;
   }
 }
+
+// Set a lead's per-campaign engagement (Mark as sent / replied / …). Returns the
+// FRESH re-hydrated campaign (so the UI can refresh the progress strip + rows in
+// one shot), or null on failure.
+export async function saveEngagement(campaignId, body) {
+  try {
+    const res = await fetch(`/api/campaigns/${campaignId}/engagement`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) return null;
+    return (await res.json()).campaign;
+  } catch {
+    return null;
+  }
+}

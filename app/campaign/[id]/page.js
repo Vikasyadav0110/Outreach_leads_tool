@@ -1,37 +1,28 @@
 import { notFound } from "next/navigation";
-import { getCampaign } from "@/lib/db";
+import { getCampaignV2, listSequences } from "@/lib/db";
 import { isMockMode } from "@/lib/anthropic";
-import { DomainChip } from "@/app/components/Brand";
+import { getActiveModule } from "@/lib/activeModule";
 import PageHeader from "@/app/components/PageHeader";
 import DeleteCampaignButton from "@/app/components/DeleteCampaignButton";
-import CampaignRunner from "./CampaignRunner";
+import CampaignDetail from "./CampaignDetail";
 
 export const dynamic = "force-dynamic";
 
-export default function CampaignPage({ params, searchParams }) {
-  const campaign = getCampaign(Number(params.id));
+export default function CampaignPage({ params }) {
+  const campaign = getCampaignV2(Number(params.id));
   if (!campaign) notFound();
-
-  const autorun = searchParams?.autorun === "1";
+  const sequences = listSequences(campaign.module || getActiveModule());
 
   return (
     <div className="space-y-6">
       <PageHeader
         backHref="/campaigns"
         backLabel="All campaigns"
-        title={
-          <span className="inline-flex flex-wrap items-center gap-2">
-            {campaign.niche} · {campaign.city}
-            <DomainChip domain={campaign.domain} />
-          </span>
-        }
-        subtitle={`Campaign #${campaign.id}`}
-        action={
-          <DeleteCampaignButton id={campaign.id} label={`${campaign.niche} · ${campaign.city}`} />
-        }
+        title={campaign.name}
+        subtitle={`Campaign #${campaign.id} · ${campaign.members.length} leads`}
+        action={<DeleteCampaignButton id={campaign.id} label={campaign.name} />}
       />
-
-      <CampaignRunner initialCampaign={campaign} autorun={autorun} mock={isMockMode()} />
+      <CampaignDetail initialCampaign={campaign} sequences={sequences} mock={isMockMode()} />
     </div>
   );
 }

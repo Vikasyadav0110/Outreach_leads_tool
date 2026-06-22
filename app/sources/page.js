@@ -1,7 +1,7 @@
 import SourceRunner from "@/app/components/SourceRunner";
 import PageHeader from "@/app/components/PageHeader";
 import { listAdapters } from "@/lib/sources";
-import { listSourcedLeads, listIngestRuns, sourcedStats } from "@/lib/db";
+import { listSourcedLeads, listIngestRuns, sourcedStats, listSavedSearches } from "@/lib/db";
 import { moduleMeta, pipelineOf } from "@/lib/modules";
 import { getActiveModule } from "@/lib/activeModule";
 
@@ -19,6 +19,7 @@ export default function SourcesPage() {
   const runs = listIngestRuns(50).filter((r) => r.pipeline === pipeline).slice(0, 8);
   const s = sourcedStats();
   const total = pipeline === "sell" ? s.sell : s.deliver;
+  const savedSearches = listSavedSearches({ module: mod, scope: "source" });
 
   return (
     <div className="space-y-6">
@@ -33,6 +34,7 @@ export default function SourcesPage() {
         total={total}
         moduleLabel={meta.label}
         pipeline={pipeline}
+        savedSearches={savedSearches}
       />
     </div>
   );

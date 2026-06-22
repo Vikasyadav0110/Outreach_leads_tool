@@ -19,7 +19,7 @@ import {
   unitEconomics,
 } from "@/lib/analytics";
 import PageHeader from "@/app/components/PageHeader";
-import { listCampaigns, listAllLeads, listSourcedLeads } from "@/lib/db";
+import { campaignsForAnalytics, leadsForAnalytics, listSourcedLeads } from "@/lib/db";
 import { isMockMode } from "@/lib/anthropic";
 import { moduleMeta, pipelineOf } from "@/lib/modules";
 import { getActiveModule } from "@/lib/activeModule";
@@ -28,7 +28,7 @@ export const dynamic = "force-dynamic";
 
 export default function AnalyticsPage() {
   const mod = getActiveModule();
-  const campaigns = listCampaigns(mod);
+  const campaigns = campaignsForAnalytics(mod);
   const mock = isMockMode();
 
   if (campaigns.length === 0) {
@@ -42,7 +42,7 @@ export default function AnalyticsPage() {
     );
   }
 
-  const allLeads = listAllLeads(mod);
+  const allLeads = leadsForAnalytics(mod);
   const sourced = listSourcedLeads({ pipeline: pipelineOf(mod), limit: 5000 });
   const ue = unitEconomics(campaigns);
   const funnelData = funnel(campaigns);
