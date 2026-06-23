@@ -4,6 +4,7 @@ import { useState } from "react";
 import CopyButton from "./CopyButton";
 import StatusSelect from "./StatusSelect";
 import StatusBadge from "./StatusBadge";
+import TemplatePicker from "./TemplatePicker";
 import { toDigits, gmailHref, waHref } from "./contact";
 
 const TABS = [
@@ -94,18 +95,35 @@ function SendButton({ href, external, variant, icon, label, disabledLabel, onSen
 
 // ---- one message --------------------------------------------------------
 
-function MessageBlock({ msg, contact, mock, onMark, saving }) {
+function MessageBlock({ msg, contact, mock, onMark, saving, profile }) {
   const [tab, setTab] = useState("email");
   const [nudge, setNudge] = useState(false); // pulse "Mark as sent" after a Send click
 
-  const emailText = `Subject: ${msg.email?.subject || ""}\n\n${msg.email?.body || ""}`;
+  // Editable per-channel copy, seeded from the AI draft. Insert-template and
+  // manual tweaks edit these; Copy + Send use the edited text.
+  const [emailBody, setEmailBody] = useState(msg.email?.body || "");
+  const [waBody, setWaBody] = useState(msg.whatsapp || "");
+  const [callBody, setCallBody] = useState(msg.callScript || "");
+
+  const emailText = `Subject: ${msg.email?.subject || ""}\n\n${emailBody}`;
 
   // In mock mode, never build real hrefs — pass them as null so SendButton
-  // shows the disabled (Simulated) state via its mock guard.
+  // shows the disabled (Simulated) state via its mock guard. Links use EDITED copy.
   const digits = mock ? null : toDigits(contact?.whatsapp);
-  const waLink = mock ? null : waHref(contact?.whatsapp, msg.whatsapp);
-  const mailLink = mock ? null : gmailHref(contact?.email, msg.email?.subject, msg.email?.body);
+  const waLink = mock ? null : waHref(contact?.whatsapp, waBody);
+  const mailLink = mock ? null : gmailHref(contact?.email, msg.email?.subject, emailBody);
   const telHref = digits ? `tel:+${digits}` : null;
+
+  // Token values for templates, drawn from the lead card + operator profile.
+  const tplVars = {
+    business: msg.name,
+    name: contact?.decisionMaker,
+    gap: contact?.exactGap,
+    service: contact?.serviceTag,
+    city: contact?.city,
+    me: profile?.me,
+    myLocation: profile?.myLocation,
+  };
 
   // Mark controls are opt-in: only when a writer + lead identity are present
   // (the campaign page passes them; the wizard does not).
@@ -161,6 +179,7 @@ function MessageBlock({ msg, contact, mock, onMark, saving }) {
                 Subject: <span className="text-ink">{msg.email?.subject}</span>
               </span>
               <div className="flex items-center gap-2">
+                <TemplatePicker channel="email" vars={tplVars} up={false} label="Template" onInsert={setEmailBody} />
                 <SendButton
                   href={mailLink}
                   mock={mock}
@@ -174,9 +193,7 @@ function MessageBlock({ msg, contact, mock, onMark, saving }) {
                 <CopyButton text={emailText} label="Copy" />
               </div>
             </div>
-            <pre className="whitespace-pre-wrap rounded-lg bg-[#f7f7f4] p-3 text-sm text-ink">
-              {msg.email?.body}
-            </pre>
+            <textarea aria-label="Email body" className="input min-h-32 text-sm" value={emailBody} onChange={(e) => setEmailBody(e.target.value)} />
           </div>
         )}
 
@@ -187,6 +204,7 @@ function MessageBlock({ msg, contact, mock, onMark, saving }) {
                 {digits ? `To +${digits}` : "No number on file"}
               </span>
               <div className="flex items-center gap-2">
+                <TemplatePicker channel="whatsapp" vars={tplVars} up={false} label="Template" onInsert={setWaBody} />
                 <SendButton
                   href={waLink}
                   mock={mock}
@@ -197,12 +215,10 @@ function MessageBlock({ msg, contact, mock, onMark, saving }) {
                   disabledLabel="No number"
                   onSent={onSent}
                 />
-                <CopyButton text={msg.whatsapp} label="Copy" />
+                <CopyButton text={waBody} label="Copy" />
               </div>
             </div>
-            <pre className="whitespace-pre-wrap rounded-lg bg-[#f7f7f4] p-3 text-sm text-ink">
-              {msg.whatsapp}
-            </pre>
+            <textarea aria-label="WhatsApp message" className="input min-h-32 text-sm" value={waBody} onChange={(e) => setWaBody(e.target.value)} />
           </div>
         )}
 
@@ -213,6 +229,7 @@ function MessageBlock({ msg, contact, mock, onMark, saving }) {
                 {digits ? `Dial +${digits}` : "No number on file"}
               </span>
               <div className="flex items-center gap-2">
+                <TemplatePicker channel="call" vars={tplVars} up={false} label="Template" onInsert={setCallBody} />
                 <SendButton
                   href={telHref}
                   mock={mock}
@@ -221,12 +238,10 @@ function MessageBlock({ msg, contact, mock, onMark, saving }) {
                   label="Call"
                   disabledLabel="No number"
                 />
-                <CopyButton text={msg.callScript} label="Copy" />
+                <CopyButton text={callBody} label="Copy" />
               </div>
             </div>
-            <pre className="whitespace-pre-wrap rounded-lg bg-[#f7f7f4] p-3 text-sm text-ink">
-              {msg.callScript}
-            </pre>
+            <textarea aria-label="Call script" className="input min-h-32 text-sm" value={callBody} onChange={(e) => setCallBody(e.target.value)} />
           </div>
         )}
       </div>
@@ -234,7 +249,7 @@ function MessageBlock({ msg, contact, mock, onMark, saving }) {
   );
 }
 
-export default function MessageTabs({ messages, qualified, mock, onMark, savingLeadId }) {
+export default function MessageTabs({ messages, qualified, mock, onMark, savingLeadId, profile }) {
   if (!messages || messages.length === 0) return null;
   const contacts = buildContactMap(qualified);
   return (
@@ -247,6 +262,7 @@ export default function MessageTabs({ messages, qualified, mock, onMark, savingL
           mock={mock}
           onMark={onMark}
           saving={savingLeadId != null && savingLeadId === m.leadId}
+          profile={profile}
         />
       ))}
     </div>

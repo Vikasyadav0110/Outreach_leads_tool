@@ -21,7 +21,7 @@ import { toast } from "@/app/components/toast";
 // Review & Send for an existing campaign. Leads are already attached (from the
 // Leads hub / wizard); here you Generate Messages (if not yet), then SEND each
 // message manually and Mark as sent / track engagement per lead.
-export default function CampaignDetail({ initialCampaign, sequences = [], mock }) {
+export default function CampaignDetail({ initialCampaign, sequences = [], profile = null, mock }) {
   const router = useRouter();
   const [campaign, setCampaign] = useState(initialCampaign);
   const [savingSeq, setSavingSeq] = useState(false);
@@ -259,7 +259,7 @@ export default function CampaignDetail({ initialCampaign, sequences = [], mock }
             <h3 className="text-sm font-semibold text-ink">Messages — review &amp; send</h3>
             <button type="button" onClick={() => setConfirmGen(true)} className="btn-ghost px-3 py-1.5 text-xs">Regenerate</button>
           </div>
-          <MessageTabs messages={campaign.messages} qualified={campaign.qualified} mock={mock} onMark={mark} savingLeadId={savingLeadId} />
+          <MessageTabs messages={campaign.messages} qualified={campaign.qualified} mock={mock} onMark={mark} savingLeadId={savingLeadId} profile={profile} />
         </section>
       )}
 

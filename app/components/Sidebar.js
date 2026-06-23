@@ -110,6 +110,7 @@ const NAV_GROUPS = [
       { href: "/leads", label: "Leads", step: 2, icon: UsersIcon, match: (p) => p.startsWith("/leads") },
       { href: "/campaigns", label: "Campaigns", step: 3, icon: MegaphoneIcon, match: (p) => p.startsWith("/campaign") },
       { href: "/sequences", label: "Sequences", icon: SequenceIcon, match: (p) => p.startsWith("/sequences") },
+      { href: "/templates", label: "Templates", icon: DocIcon, match: (p) => p.startsWith("/templates") },
     ],
   },
   {
@@ -117,7 +118,6 @@ const NAV_GROUPS = [
     items: [
       { href: "/analytics", label: "Analytics", icon: ChartIcon, match: (p) => p.startsWith("/analytics") },
       { href: "/reports", label: "Reports", icon: ReportIcon, match: (p) => p.startsWith("/reports") },
-      { href: "/templates", label: "Templates", icon: DocIcon, match: (p) => p.startsWith("/templates") },
       { href: "/settings", label: "Settings", icon: GearIcon, match: (p) => p.startsWith("/settings") },
     ],
   },

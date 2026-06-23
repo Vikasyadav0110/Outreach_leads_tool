@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DocIcon } from "./icons";
+import { fillTemplate } from "./templateVars";
 
 // Small dropdown that loads saved snippets and inserts one via onInsert(body).
 // Opens upward (for bottom-anchored inputs like the copilot).
-export default function TemplatePicker({ onInsert, up = true }) {
+// Optional: `channel` filters to that channel + "general"; `vars` token-fills the
+// body (via fillTemplate) before insert. Label/up are presentation tweaks.
+export default function TemplatePicker({ onInsert, up = true, channel = null, vars = null, label = "Templates" }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -29,6 +32,9 @@ export default function TemplatePicker({ onInsert, up = true }) {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
+  // When a channel is given, show that channel's templates + the catch-all "general".
+  const visible = channel ? items.filter((s) => s.channel === channel || s.channel === "general") : items;
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -38,22 +44,22 @@ export default function TemplatePicker({ onInsert, up = true }) {
         title="Insert a saved template"
       >
         <DocIcon width="13" height="13" />
-        Templates
+        {label}
       </button>
       {open && (
         <div className={`absolute left-0 z-10 max-h-64 w-72 overflow-y-auto rounded-card border border-line bg-card shadow-pop ${up ? "bottom-full mb-1" : "top-full mt-1"}`}>
           {!loaded && <div className="px-3 py-3 text-xs text-muted">Loading…</div>}
-          {loaded && items.length === 0 && (
+          {loaded && visible.length === 0 && (
             <div className="px-3 py-3 text-xs text-muted">
-              No templates yet — create some in Templates.
+              No {channel ? `${channel} ` : ""}templates yet — create some in Templates.
             </div>
           )}
-          {items.map((s) => (
+          {visible.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => {
-                onInsert(s.body);
+                onInsert(vars ? fillTemplate(s.body, vars) : s.body);
                 // Fire-and-forget usage bump.
                 fetch(`/api/snippets/${s.id}`, { method: "PATCH" }).catch(() => {});
                 setOpen(false);
