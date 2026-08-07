@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { enrichContact } from "@/lib/enrich";
-import { getLead, patchLead, setLeadQualified, addUsage } from "@/lib/db";
-import { resetUsage, getUsage } from "@/lib/anthropic";
+import { getLead, patchLead, setLeadQualified } from "@/lib/db";
+import { resetUsage } from "@/lib/anthropic";
 import { getActiveModule } from "@/lib/activeModule";
 import { requireApiAuth } from "@/lib/authGuard";
 import { apiHandler, ApiError } from "@/lib/apiHandler";
@@ -24,7 +24,6 @@ export const POST = apiHandler(async (_req, { params }) => {
     { id, name: lead.name, website: lead.website, city: lead.city, signal: lead.gap, source: lead.source },
     { module: lead.module || getActiveModule() }
   );
-  addUsage(null, getUsage());
 
   if (!c?.found) {
     return NextResponse.json({ lead: getLead(id), found: false });

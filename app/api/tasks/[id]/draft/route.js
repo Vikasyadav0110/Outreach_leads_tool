@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { runWriteStep } from "@/lib/agents";
-import { getTask, getLead, getCampaignV2, getSequence, getSettings, saveTaskDraft, addUsage } from "@/lib/db";
-import { resetUsage, getUsage } from "@/lib/anthropic";
+import { getTask, getLead, getCampaignV2, getSequence, getSettings, saveTaskDraft } from "@/lib/db";
+import { resetUsage } from "@/lib/anthropic";
 import { requireApiAuth } from "@/lib/authGuard";
 import { apiHandler, ApiError } from "@/lib/apiHandler";
 
@@ -36,7 +36,6 @@ export const POST = apiHandler(async (_req, { params }) => {
     profile: getSettings(), module: lead.module,
     campaignId: task.campaign_id, leadId: task.lead_id,
   });
-  addUsage(null, getUsage());
 
   saveTaskDraft(task.id, draft);
   return NextResponse.json({ draft });

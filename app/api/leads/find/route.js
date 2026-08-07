@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { runFindLeads } from "@/lib/agents";
 import { isValidDomain } from "@/lib/prompts";
 import { upsertLeadByIdentity } from "@/lib/db";
-import { resetUsage, getUsage } from "@/lib/anthropic";
-import { addUsage } from "@/lib/db";
+import { resetUsage } from "@/lib/anthropic";
 import { getActiveModule } from "@/lib/activeModule";
 import { requireApiAuth } from "@/lib/authGuard";
 import { apiHandler, ApiError } from "@/lib/apiHandler";
@@ -36,7 +35,6 @@ export const POST = apiHandler(async (req) => {
     const { created } = upsertLeadByIdentity({ ...l, module, niche, city: l.city || city, domain });
     created ? added++ : updated++;
   }
-  addUsage(null, getUsage());
 
   return NextResponse.json({ found: (leads || []).length, added, updated });
 });

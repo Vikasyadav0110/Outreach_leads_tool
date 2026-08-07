@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { runWriteMessages } from "@/lib/agents";
-import { getCampaignV2, getSettings, saveCampaignLeadMessages, setCampaignV2Status, addUsage } from "@/lib/db";
-import { resetUsage, getUsage } from "@/lib/anthropic";
+import { getCampaignV2, getSettings, saveCampaignLeadMessages, setCampaignV2Status } from "@/lib/db";
+import { resetUsage } from "@/lib/anthropic";
 import { requireApiAuth } from "@/lib/authGuard";
 import { apiHandler, ApiError } from "@/lib/apiHandler";
 
@@ -44,7 +44,6 @@ export const POST = apiHandler(async (req, { params }) => {
     saveCampaignLeadMessages(id, m.id, msg);
     written++;
   }
-  addUsage(null, getUsage());
   setCampaignV2Status(id, "messages_ready");
 
   return NextResponse.json({ written, campaign: getCampaignV2(id) });

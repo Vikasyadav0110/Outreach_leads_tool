@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { runQualify } from "@/lib/agents";
 import { enrichCard } from "@/lib/enrich";
-import { getLead, setLeadQualified, addUsage } from "@/lib/db";
-import { resetUsage, getUsage } from "@/lib/anthropic";
+import { getLead, setLeadQualified } from "@/lib/db";
+import { resetUsage } from "@/lib/anthropic";
 import { getActiveModule } from "@/lib/activeModule";
 import { requireApiAuth } from "@/lib/authGuard";
 import { apiHandler, ApiError } from "@/lib/apiHandler";
@@ -45,7 +45,6 @@ export const POST = apiHandler(async (req) => {
     setLeadQualified(id, card);
     qualified++;
   }
-  addUsage(null, getUsage());
 
   return NextResponse.json({ qualified, skipped });
 });
