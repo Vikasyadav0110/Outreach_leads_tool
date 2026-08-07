@@ -9,7 +9,9 @@ import EmptyState from "./EmptyState";
 import LeadDetailDrawer from "./LeadDetailDrawer";
 import FocusMode from "./FocusMode";
 import { AddToCampaignModal } from "./LeadsHub";
+import CopyButton from "./CopyButton";
 import { fmtDate } from "./format";
+import { waHref, gmailHref, toDigits } from "./contact";
 import { toast } from "./toast";
 
 // The "Today" workspace — the daily home screen. Answers "what do I do right
@@ -61,8 +63,23 @@ export default function TodayWorkspace({
   const [openLead, setOpenLead] = useState(null);
   const [focus, setFocus] = useState(false);
   const [addLead, setAddLead] = useState(null); // hot lead being added to a campaign
+  const [drafting, setDrafting] = useState(null); // task id currently drafting
+  const [openDraft, setOpenDraft] = useState(null); // task id whose draft is expanded
 
   const overdue = useMemo(() => taskList.filter((t) => t.overdue).length, [taskList]);
+
+  // Generate (or regenerate) the AI draft for a sequence-step task.
+  async function draftStep(id) {
+    setDrafting(id);
+    try {
+      const res = await fetch(`/api/tasks/${id}/draft`, { method: "POST" });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Draft failed.");
+      setTaskList((ts) => ts.map((t) => (t.id === id ? { ...t, draft: d.draft } : t)));
+      setOpenDraft(id);
+      toast("Draft ready.");
+    } catch (e) { toast(e.message, "error"); } finally { setDrafting(null); }
+  }
 
   // ---- task actions (reuse the existing /api/tasks endpoint) ----
   async function taskAct(id, action, days) {
@@ -145,31 +162,66 @@ export default function TodayWorkspace({
               <p className="card p-4 text-sm text-muted">No follow-ups scheduled. Nice and clear.</p>
             ) : (
               <div className="card divide-y divide-line p-0">
-                {taskList.slice(0, 12).map((t) => (
-                  <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${t.overdue ? "bg-danger" : "bg-accent"}`} aria-hidden="true" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-ink">
-                        {t.leadName}
-                        {t.note ? <span className="ml-2 font-normal text-accent">· {t.note}</span> : ""}
+                {taskList.slice(0, 12).map((t) => {
+                  const isStep = t.stepIndex != null;
+                  const expanded = openDraft === t.id && t.draft;
+                  return (
+                  <div key={t.id}>
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <span className={`h-2 w-2 shrink-0 rounded-full ${t.overdue ? "bg-danger" : "bg-accent"}`} aria-hidden="true" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-ink">
+                          {t.leadName}
+                          {t.note ? <span className="ml-2 font-normal text-accent">· {t.note}</span> : ""}
+                        </div>
+                        <div className="truncate text-xs text-muted">
+                          {dueLabel(t.dueAt, t.overdue)}
+                          {t.niche ? ` · ${t.niche}` : ""}
+                          {t.city ? ` · ${t.city}` : ""}
+                        </div>
                       </div>
-                      <div className="truncate text-xs text-muted">
-                        {dueLabel(t.dueAt, t.overdue)}
-                        {t.niche ? ` · ${t.niche}` : ""}
-                        {t.city ? ` · ${t.city}` : ""}
-                      </div>
+                      {isStep && (
+                        t.draft ? (
+                          <button type="button" onClick={() => setOpenDraft(expanded ? null : t.id)} className="shrink-0 rounded-md border border-line bg-white px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/5">
+                            {expanded ? "Hide draft" : "View draft"}
+                          </button>
+                        ) : (
+                          <button type="button" onClick={() => draftStep(t.id)} disabled={drafting === t.id} className="shrink-0 rounded-md border border-line bg-white px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/5 disabled:opacity-50">
+                            {drafting === t.id ? "Drafting…" : "✍️ Draft"}
+                          </button>
+                        )
+                      )}
+                      <Link href={`/campaign/${t.campaignId}`} className="shrink-0 rounded-md border border-line bg-white px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/5">
+                        Open
+                      </Link>
+                      <button type="button" onClick={() => taskAct(t.id, "snooze", 1)} disabled={busy === t.id} className="shrink-0 rounded-md px-2 py-1 text-xs text-muted hover:text-ink disabled:opacity-50" title="Snooze 1 day">
+                        Snooze
+                      </button>
+                      <button type="button" onClick={() => taskAct(t.id, "complete")} disabled={busy === t.id} className="shrink-0 rounded-md bg-success px-2.5 py-1 text-xs font-medium text-white hover:bg-[#046c4e] disabled:opacity-50">
+                        Done
+                      </button>
                     </div>
-                    <Link href={`/campaign/${t.campaignId}`} className="shrink-0 rounded-md border border-line bg-white px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/5">
-                      Open
-                    </Link>
-                    <button type="button" onClick={() => taskAct(t.id, "snooze", 1)} disabled={busy === t.id} className="shrink-0 rounded-md px-2 py-1 text-xs text-muted hover:text-ink disabled:opacity-50" title="Snooze 1 day">
-                      Snooze
-                    </button>
-                    <button type="button" onClick={() => taskAct(t.id, "complete")} disabled={busy === t.id} className="shrink-0 rounded-md bg-success px-2.5 py-1 text-xs font-medium text-white hover:bg-[#046c4e] disabled:opacity-50">
-                      Done
-                    </button>
+                    {expanded && (
+                      <div className="border-t border-line bg-[#faf9f6] px-4 py-3">
+                        {t.draft.subject && <div className="mb-1 text-xs text-muted">Subject: <span className="text-ink">{t.draft.subject}</span></div>}
+                        <pre className="whitespace-pre-wrap rounded-lg bg-white p-3 text-sm text-ink">{t.draft.body}</pre>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <CopyButton text={t.draft.subject ? `Subject: ${t.draft.subject}\n\n${t.draft.body}` : t.draft.body} label="Copy" />
+                          {!mock && t.draft.channel === "whatsapp" && toDigits(t.phone) && (
+                            <a href={waHref(t.phone, t.draft.body)} target="_blank" rel="noopener noreferrer" className="btn bg-success px-3 py-1.5 text-xs text-white hover:bg-[#046c4e]">Send WhatsApp</a>
+                          )}
+                          {!mock && t.draft.channel === "email" && t.email && (
+                            <a href={gmailHref(t.email, t.draft.subject, t.draft.body)} target="_blank" rel="noopener noreferrer" className="btn bg-accent px-3 py-1.5 text-xs text-white hover:bg-[#1647b8]">Send email</a>
+                          )}
+                          <button type="button" onClick={() => draftStep(t.id)} disabled={drafting === t.id} className="text-xs font-medium text-muted hover:text-ink disabled:opacity-50">
+                            {drafting === t.id ? "…" : "↻ Redraft"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </QueueSection>
@@ -259,6 +311,7 @@ export default function TodayWorkspace({
       {focus && (
         <FocusMode
           tasks={taskList}
+          mock={mock}
           onClose={() => { setFocus(false); router.refresh(); }}
           onResolve={(id) => setTaskList((ts) => ts.filter((t) => t.id !== id))}
         />

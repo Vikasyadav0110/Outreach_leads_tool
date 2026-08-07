@@ -6,6 +6,7 @@ import ScoreBadge from "./ScoreBadge";
 import StatusBadge from "./StatusBadge";
 import ConfirmActionModal from "./ConfirmActionModal";
 import LeadDetailDrawer from "./LeadDetailDrawer";
+import LinkedInImportModal from "./LinkedInImportModal";
 import EmptyState from "./EmptyState";
 import { DomainChip } from "./Brand";
 import { LEAD_LIFECYCLE } from "./status";
@@ -21,6 +22,7 @@ export default function LeadsHub({ leads, campaigns, mock = false }) {
   const [status, setStatus] = useState("all");
   const [picked, setPicked] = useState(() => new Set());
   const [findOpen, setFindOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [confirm, setConfirm] = useState(null); // {title,body,confirmLabel,onConfirm,tone}
   const [busy, setBusy] = useState(false);
   const [openLead, setOpenLead] = useState(null);
@@ -83,7 +85,8 @@ export default function LeadsHub({ leads, campaigns, mock = false }) {
           {LEAD_LIFECYCLE.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
         </select>
         {!empty && <span className="text-xs text-muted">{view.length} of {leads.length}</span>}
-        <button type="button" onClick={() => setFindOpen(true)} className="btn-primary ml-auto px-4 py-2 text-sm">+ Find New Leads</button>
+        <button type="button" onClick={() => setImportOpen(true)} className="btn-ghost ml-auto px-4 py-2 text-sm">Import from LinkedIn</button>
+        <button type="button" onClick={() => setFindOpen(true)} className="btn-primary px-4 py-2 text-sm">+ Find New Leads</button>
       </div>
 
       {empty ? (
@@ -151,6 +154,8 @@ export default function LeadsHub({ leads, campaigns, mock = false }) {
       )}
 
       {findOpen && <FindModal onClose={() => setFindOpen(false)} onDone={() => { setFindOpen(false); router.refresh(); }} />}
+
+      {importOpen && <LinkedInImportModal onClose={() => setImportOpen(false)} onDone={() => { setImportOpen(false); router.refresh(); }} />}
 
       {confirm?.addToCampaign && (
         <AddToCampaignModal
