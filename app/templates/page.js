@@ -8,7 +8,7 @@ export default function TemplatesPage() {
   const snippets = listSnippets();
   return (
     <div className="space-y-6">
-      <PageHeader title="Templates" subtitle="Reusable message snippets you can copy into any outreach." />
+      <PageHeader title="Templates" subtitle="Saved messages you can reuse in any outreach (Templates)." />
       <TemplatesManager initial={snippets} />
     </div>
   );

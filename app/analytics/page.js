@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Analytics" subtitle={`${moduleMeta(mod).label} · conversion, sourcing and unit economics.`} />
+      <PageHeader title="Analytics" subtitle={`${moduleMeta(mod).label} · how many leads turn into replies and deals (Funnel).`} />
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">

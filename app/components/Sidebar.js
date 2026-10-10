@@ -62,6 +62,23 @@ function ChartIcon(props) {
     </svg>
   );
 }
+function SparkIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M12 3l1.9 4.8L18.7 9.6l-4.8 1.9L12 16.3l-1.9-4.8L5.3 9.6l4.8-1.9z" />
+      <path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" />
+    </svg>
+  );
+}
+function HelpIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
 function SequenceIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -101,7 +118,10 @@ function CloseIcon(props) {
 // review (Leads) → reach out (Campaigns). Workflow items carry a step number.
 const NAV_GROUPS = [
   {
-    items: [{ href: "/", label: "Today", icon: GridIcon, match: (p) => p === "/" }],
+    items: [
+      { href: "/generate", label: "Generate Leads", icon: SparkIcon, match: (p) => p.startsWith("/generate"), highlight: true },
+      { href: "/", label: "Today", icon: GridIcon, match: (p) => p === "/" },
+    ],
   },
   {
     title: "Workflow",
@@ -119,17 +139,18 @@ const NAV_GROUPS = [
       { href: "/analytics", label: "Analytics", icon: ChartIcon, match: (p) => p.startsWith("/analytics") },
       { href: "/reports", label: "Reports", icon: ReportIcon, match: (p) => p.startsWith("/reports") },
       { href: "/settings", label: "Settings", icon: GearIcon, match: (p) => p.startsWith("/settings") },
+      { href: "/guide", label: "Guide", icon: HelpIcon, match: (p) => p.startsWith("/guide") },
     ],
   },
 ];
 
 function Brandmark({ onClick, name = APP_NAME }) {
   return (
-    <Link href="/" onClick={onClick} className="flex items-center gap-2">
-      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent2 text-sm font-bold text-white shadow-sm">
+    <Link href="/" onClick={onClick} className="flex items-center gap-2.5">
+      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent2 font-display text-base font-bold text-white shadow-[0_4px_12px_-3px_rgb(var(--accent)/0.5)]">
         {name.charAt(0)}
       </span>
-      <span className="bg-gradient-to-r from-accent to-accent2 bg-clip-text text-lg font-bold tracking-tight text-transparent">
+      <span className="bg-gradient-to-r from-accent to-accent2 bg-clip-text font-display text-lg font-bold tracking-tight text-transparent">
         {name}
       </span>
     </Link>
@@ -178,12 +199,17 @@ export default function Sidebar({ mock, brandName, authEnabled, activeModule, du
                 href={item.href}
                 onClick={close}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-                  active ? "bg-accent/10 text-accent" : "text-muted hover:bg-[#f3f3f0] hover:text-ink"
+                className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition duration-150 ${
+                  item.highlight
+                    ? `bg-gradient-to-r from-accent to-accent2 text-white shadow-sm hover:brightness-[1.06] ${active ? "ring-2 ring-accent/30 ring-offset-1" : ""}`
+                    : active
+                      ? "bg-accent/10 text-accent before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-accent"
+                      : "text-muted hover:bg-[#f3f3f0] hover:text-ink"
                 }`}
               >
                 <Icon width="18" height="18" />
                 <span className="flex-1">{item.label}</span>
+                {item.highlight && <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold">Start</span>}
                 {item.href === "/" && dueCount > 0 && (
                   <span
                     className="flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-[10px] font-bold text-white"

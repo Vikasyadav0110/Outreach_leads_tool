@@ -33,16 +33,16 @@ export default function LoginForm({ defaultUsername = "" }) {
   }
 
   return (
-    <form onSubmit={submit} className="card w-full max-w-sm p-6">
-      <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent2 text-sm font-bold text-white shadow-sm">
+    <form onSubmit={submit} className="card-accent w-full max-w-sm p-6 shadow-pop">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent2 font-display text-lg font-bold text-white shadow-[0_4px_12px_-3px_rgb(var(--accent)/0.5)]">
           {APP_NAME.charAt(0)}
         </span>
-        <span className="bg-gradient-to-r from-accent to-accent2 bg-clip-text text-lg font-bold tracking-tight text-transparent">
+        <span className="bg-gradient-to-r from-accent to-accent2 bg-clip-text font-display text-xl font-bold tracking-tight text-transparent">
           {APP_NAME}
         </span>
       </div>
-      <h1 className="h-display mt-4 text-lg text-ink">Sign in</h1>
+      <h1 className="h-display mt-5 text-xl text-ink">Sign in</h1>
       <p className="mt-1 text-sm text-muted">Enter your email and password to continue.</p>
 
       <label className="label mt-4" htmlFor="login-email">Email</label>

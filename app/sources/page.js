@@ -29,7 +29,7 @@ export default function SourcesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Sources"
-        subtitle={`${meta.label} · find and stream leads for this module in real time.`}
+        subtitle={`${meta.label} · advanced search across Google, job boards, tenders & more (Sourcing). New here? Use Generate Leads instead.`}
       />
       <SourceRunner
         adapters={adapters}

@@ -67,10 +67,10 @@ const TONE = {
 
 export function KpiCard({ label, value, sub, tone = "ink" }) {
   return (
-    <div className="card p-4">
-      <div className={`text-2xl font-bold tracking-tight ${TONE[tone] || TONE.ink}`}>{value}</div>
-      <div className="mt-0.5 text-xs font-medium text-muted">{label}</div>
-      {sub != null && <div className="mt-1 text-[11px] text-muted">{sub}</div>}
+    <div className="card card-hover p-4">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</div>
+      <div className={`mt-1 font-display text-[1.75rem] font-bold leading-none tracking-tight ${TONE[tone] || TONE.ink}`}>{value}</div>
+      {sub != null && <div className="mt-1.5 text-[11px] text-muted">{sub}</div>}
     </div>
   );
 }

@@ -17,13 +17,16 @@ export default function EmptyDashboard({ mock }) {
         <p className="mx-auto mt-2 max-w-md text-sm text-muted">
           OutreachPilot works in three steps:
           <span className="mt-3 block text-ink">
-            1. <span className="font-medium">Find leads</span> &nbsp;→&nbsp; 2. <span className="font-medium">Qualify &amp; Score</span> &nbsp;→&nbsp; 3. <span className="font-medium">Build a campaign &amp; send</span>
+            1. <span className="font-medium">Find leads</span> &nbsp;→&nbsp; 2. <span className="font-medium">Check fit (Qualify)</span> &nbsp;→&nbsp; 3. <span className="font-medium">Build a campaign &amp; send</span>
           </span>
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link href="/leads" className="btn-primary px-5 py-2.5">Find Leads</Link>
-          <Link href="/sources" className="btn-ghost px-5 py-2.5">Browse Sources</Link>
+          <Link href="/generate" className="btn-primary px-5 py-2.5">✨ Generate my first leads</Link>
+          <Link href="/sources" className="btn-ghost px-5 py-2.5">Browse sources (advanced)</Link>
         </div>
+        <p className="mt-4 text-sm text-muted">
+          New here? <Link href="/guide" className="font-medium text-accent hover:underline">Read the 5-step guide →</Link>
+        </p>
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ export default function LeadsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Leads"
-        subtitle={`${moduleMeta(mod).label} · your data hub. Find, qualify, then add leads to a campaign.`}
+        subtitle={`${moduleMeta(mod).label} · every business you've found. Check which are a good fit (Qualify), then message them in a campaign.`}
       />
       <LeadsHub leads={leads} campaigns={campaigns} mock={isMockMode()} />
     </div>

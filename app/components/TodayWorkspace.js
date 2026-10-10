@@ -128,7 +128,7 @@ export default function TodayWorkspace({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="h-display text-xl text-ink">Today</h1>
+          <h1 className="h-display text-2xl text-ink sm:text-[1.7rem]">Today</h1>
           <p className="mt-0.5 text-sm text-muted">
             {empty
               ? "You're all caught up — no follow-ups, replies, or hot leads waiting."

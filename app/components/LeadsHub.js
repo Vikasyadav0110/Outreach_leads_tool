@@ -48,7 +48,7 @@ export default function LeadsHub({ leads, campaigns, mock = false }) {
     setConfirm({
       title: `Qualify ${ids.length} lead${ids.length > 1 ? "s" : ""}?`,
       body: "AI will research each selected lead's contact + the best pitch. Uses AI credits. Other leads are untouched.",
-      confirmLabel: "Qualify & Score",
+      confirmLabel: "Check fit (Qualify)",
       onConfirm: async () => {
         setBusy(true);
         try {
@@ -86,15 +86,20 @@ export default function LeadsHub({ leads, campaigns, mock = false }) {
         </select>
         {!empty && <span className="text-xs text-muted">{view.length} of {leads.length}</span>}
         <button type="button" onClick={() => setImportOpen(true)} className="btn-ghost ml-auto px-4 py-2 text-sm">Import from LinkedIn</button>
-        <button type="button" onClick={() => setFindOpen(true)} className="btn-primary px-4 py-2 text-sm">+ Find New Leads</button>
+        <button type="button" onClick={() => setFindOpen(true)} className="btn-primary px-4 py-2 text-sm">+ Find businesses</button>
       </div>
 
       {empty ? (
         <EmptyState
           icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>}
           title="No leads yet"
-          hint="1. Find leads  →  2. Qualify & Score  →  3. Add to a Campaign. Start by finding leads for a niche + city."
-          action={<button type="button" onClick={() => setFindOpen(true)} className="btn-primary">+ Find New Leads</button>}
+          hint="New here? Generate Leads does it all for you — finds businesses, checks fit (Qualify) and writes your messages."
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <a href="/generate" className="btn-primary">✨ Generate leads</a>
+              <button type="button" onClick={() => setFindOpen(true)} className="btn-ghost">Just find businesses</button>
+            </div>
+          }
         />
       ) : (
         <>
@@ -103,8 +108,8 @@ export default function LeadsHub({ leads, campaigns, mock = false }) {
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2">
               <span className="text-sm text-ink">{picked.size} selected</span>
               <div className="ml-auto flex flex-wrap gap-2">
-                <button type="button" onClick={qualifySelected} disabled={busy} className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-white hover:bg-[#1647b8] disabled:opacity-50">Qualify &amp; Score</button>
-                <button type="button" onClick={() => setConfirm({ addToCampaign: true })} disabled={busy} className="rounded-md border border-line bg-white px-3 py-1 text-xs font-medium text-ink hover:bg-[#f3f3f0] disabled:opacity-50">Add to Campaign</button>
+                <button type="button" onClick={qualifySelected} disabled={busy} className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-white hover:bg-[#1647b8] disabled:opacity-50">Check fit (Qualify)</button>
+                <button type="button" onClick={() => setConfirm({ addToCampaign: true })} disabled={busy} className="rounded-md border border-line bg-white px-3 py-1 text-xs font-medium text-ink hover:bg-[#f3f3f0] disabled:opacity-50">Message them (Add to campaign)</button>
                 <button type="button" onClick={exportSelected} disabled={busy} className="rounded-md border border-line bg-white px-3 py-1 text-xs font-medium text-ink hover:bg-[#f3f3f0] disabled:opacity-50">Export CSV</button>
                 <button type="button" onClick={() => setPicked(new Set())} className="rounded-md px-2 py-1 text-xs text-muted hover:text-ink">Clear</button>
               </div>

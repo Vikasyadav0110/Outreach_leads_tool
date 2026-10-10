@@ -14,7 +14,7 @@ export default function CampaignsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Campaigns"
-        subtitle={`${moduleMeta(mod).label} · ${campaigns.length} total`}
+        subtitle={`${moduleMeta(mod).label} · ${campaigns.length} total · a campaign is a group of leads you message together.`}
         action={
           <Link href="/campaigns/new" className="btn-primary">
             New campaign

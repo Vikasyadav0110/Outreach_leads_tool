@@ -252,7 +252,7 @@ export default function LeadDetailDrawer({ lead, mock = false, onClose, onChange
               <div className="mb-2 rounded-lg bg-[#f7f7f4] px-3 py-2.5">
                 <p className="text-xs text-muted">Not qualified yet — find the decision-maker, exact gap, and contact.</p>
                 <button type="button" onClick={qualify} disabled={!!busy || blocked} title={blocked ? "Blocked — lead is do-not-contact" : undefined} className="btn-primary mt-2 px-3 py-1.5 text-xs disabled:opacity-60 disabled:cursor-not-allowed">
-                  {busy === "qualify" ? "Qualifying…" : "Qualify & Score"}
+                  {busy === "qualify" ? "Qualifying…" : "Check fit (Qualify)"}
                 </button>
               </div>
             )}

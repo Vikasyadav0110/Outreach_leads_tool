@@ -9,7 +9,7 @@ import ConfirmActionModal from "./ConfirmActionModal";
 import EmptyState from "./EmptyState";
 import { toast } from "./toast";
 
-const STEPS = [{ label: "Select Leads" }, { label: "Generate Messages" }, { label: "Review & Send" }];
+const STEPS = [{ label: "Select Leads" }, { label: "Write messages with AI" }, { label: "Review & Send" }];
 
 // 3-step campaign builder. Leads are picked from the qualified pool (reusable
 // across campaigns), messages are generated on explicit confirm, then reviewed.
@@ -135,14 +135,14 @@ export default function CampaignWizard({ qualifiedLeads, mock }) {
             <h3 className="text-sm font-semibold text-ink">{campaign.name}</h3>
             <p className="mt-1 text-sm text-muted">{campaign.members.length} leads · channel: {campaign.channel}</p>
             <p className="mt-3 text-xs text-muted">AI will draft an email, WhatsApp message, and call script for each lead. {!mock && <span className="text-amber-700">Uses AI credits.</span>}</p>
-            <button type="button" onClick={() => setConfirmGen(true)} className="btn-primary mt-4">Generate Messages</button>
+            <button type="button" onClick={() => setConfirmGen(true)} className="btn-primary mt-4">Write messages with AI</button>
           </div>
           <button type="button" onClick={() => setStep(0)} className="text-xs text-muted hover:text-ink">← Back to leads</button>
           {confirmGen && (
             <ConfirmActionModal
               title={`Generate messages for ${campaign.members.length} leads?`}
               body="This drafts email + WhatsApp + call script per lead and uses AI credits."
-              confirmLabel="Generate Messages" busy={busy}
+              confirmLabel="Write messages with AI" busy={busy}
               onConfirm={generate} onClose={() => !busy && setConfirmGen(false)}
             />
           )}

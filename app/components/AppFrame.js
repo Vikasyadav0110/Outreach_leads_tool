@@ -48,7 +48,7 @@ export default function AppFrame({ mock, brandName, authEnabled, activeModule, d
       <div className="lg:flex">
         <Sidebar mock={mock} brandName={brandName} authEnabled={authEnabled} activeModule={activeModule} dueCount={dueCount} />
         <div className="min-w-0 flex-1">
-          <main className="mx-auto max-w-content px-6 py-8">{children}</main>
+          <main key={pathname} className="mx-auto max-w-content animate-fadeInUp px-6 py-8">{children}</main>
         </div>
       </div>
       <CommandPalette />

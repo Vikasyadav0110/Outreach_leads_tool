@@ -13,7 +13,7 @@ export default function SequencesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Sequences"
-        subtitle={`${moduleMeta(mod).label} · multi-step follow-up cadences. Attach one to a campaign and each step lands in Today.`}
+        subtitle={`${moduleMeta(mod).label} · automatic follow-up reminders (Cadences). Attach one to a campaign and each step shows up in Today.`}
       />
       <SequencesManager initial={sequences} />
     </div>

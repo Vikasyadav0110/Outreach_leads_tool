@@ -1,5 +1,11 @@
 import "./globals.css";
+import { Inter, Sora } from "next/font/google";
 import { APP_NAME } from "./components/Brand";
+
+// Body text (Inter) + display face for headings/brand (Sora). next/font self-hosts
+// these with `font-display: swap` — no render-blocking Google @import, no FOIT.
+const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-sans", display: "swap" });
+const sora = Sora({ subsets: ["latin"], weight: ["500", "600", "700"], variable: "--font-display", display: "swap" });
 import AppFrame from "./components/AppFrame";
 import { accentVars, DEFAULT_ACCENT } from "./components/theme";
 import { isMockMode } from "@/lib/anthropic";
@@ -28,7 +34,7 @@ export default async function RootLayout({ children }) {
   const dueCount = dueTaskCount(activeModule);
 
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${sora.variable}`}>
       <body>
         {/* Per-tenant white-label accent (overrides the globals.css default). */}
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />

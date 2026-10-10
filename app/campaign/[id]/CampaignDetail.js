@@ -160,9 +160,9 @@ export default function CampaignDetail({ initialCampaign, sequences = [], profil
       {/* Generate step */}
       {!hasMessages && (
         <div className="card p-5">
-          <h3 className="text-sm font-semibold text-ink">Generate Messages</h3>
+          <h3 className="text-sm font-semibold text-ink">Write messages with AI</h3>
           <p className="mt-1 text-sm text-muted">Draft an email, WhatsApp message, and call script for each of the {campaign.members.length} leads.</p>
-          <button type="button" onClick={() => setConfirmGen(true)} className="btn-primary mt-3">Generate Messages</button>
+          <button type="button" onClick={() => setConfirmGen(true)} className="btn-primary mt-3">Write messages with AI</button>
         </div>
       )}
 
@@ -257,7 +257,7 @@ export default function CampaignDetail({ initialCampaign, sequences = [], profil
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-ink">Messages — review &amp; send</h3>
-            <button type="button" onClick={() => setConfirmGen(true)} className="btn-ghost px-3 py-1.5 text-xs">Regenerate</button>
+            <button type="button" onClick={() => setConfirmGen(true)} className="btn-ghost px-3 py-1.5 text-xs">Rewrite messages</button>
           </div>
           <MessageTabs messages={campaign.messages} qualified={campaign.qualified} mock={mock} onMark={mark} savingLeadId={savingLeadId} profile={profile} />
         </section>
@@ -267,7 +267,7 @@ export default function CampaignDetail({ initialCampaign, sequences = [], profil
         <ConfirmActionModal
           title={`${hasMessages ? "Regenerate" : "Generate"} messages for ${campaign.members.length} leads?`}
           body="Drafts email + WhatsApp + call script per lead and uses AI credits."
-          confirmLabel={hasMessages ? "Regenerate" : "Generate Messages"} busy={busy}
+          confirmLabel={hasMessages ? "Regenerate" : "Write messages with AI"} busy={busy}
           onConfirm={generate} onClose={() => !busy && setConfirmGen(false)}
         />
       )}
